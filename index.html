@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام الساعات الإضافية — هركو</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Segoe UI", Tahoma, Arial, sans-serif; background: #F5F5F0; min-height: 100vh; }
+body.lang-ar, body.lang-ur { direction: rtl; }
+body.lang-en { direction: ltr; }
+
+/* ======= PRINT STYLES ======= */
+@media print {
+  body { background: white !important; font-size: 10pt; }
+  /* Hide everything by default */
+  body > * { display: none !important; }
+  /* Show only the print target */
+  #printTarget { display: block !important; }
+  @page { size: A4 portrait; margin: 12mm; }
+  .pdf-header { display: flex !important; }
+  table { font-size: 9pt; width: 100%; }
+  th, td { padding: 5px 8px !important; }
+  .tbl-wrap { overflow: visible !important; }
+  .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+  .card-header { background: #f5f5f5 !important; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  .worker-section-header { display: block !important; }
+}
+#printTarget { display: none; }
+.print-only { display: none; }
+.worker-section-header { display: none; background: #E6F1FB; border-radius: 8px; padding: 10px 16px; margin: 12px 0 8px; }
+.worker-section-header h3 { font-size: 14pt; font-weight: 700; color: #185FA5; margin: 0; }
+.worker-section-header p { font-size: 10pt; color: #444; margin: 3px 0 0; }
+
+/* LANG BAR */
+.lang-bar { background: #1a1a1a; padding: 7px 1.5rem; display: flex; align-items: center; gap: 6px; justify-content: center; }
+.lang-bar-label { color: rgba(255,255,255,0.4); font-size: 12px; }
+.lang-btn { background: transparent; border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.65); border-radius: 20px; padding: 4px 16px; font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.lang-btn.active { background: #185FA5; border-color: #185FA5; color: white; font-weight: 600; }
+
+/* PDF HEADER */
+.pdf-header { display: none; background: #1a3d6b; color: white; padding: 12px 20px; align-items: center; justify-content: space-between; border-radius: 8px; margin-bottom: 14px; }
+.pdf-header-logo img { height: 40px; background: white; padding: 4px; border-radius: 6px; }
+.pdf-header-info { text-align: center; flex: 1; }
+.pdf-header-company { font-size: 14pt; font-weight: bold; margin-bottom: 3px; }
+.pdf-header-title { font-size: 11pt; opacity: 0.9; }
+.pdf-header-date { font-size: 8pt; opacity: 0.7; margin-top: 3px; }
+.pdf-header-right { font-size: 9pt; opacity: 0.75; text-align: left; }
+
+/* LOGIN */
+.login-screen { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 38px); padding: 2rem; }
+.login-card { background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2.5rem; width: 100%; max-width: 400px; }
+.login-logo { text-align: center; margin-bottom: 2rem; }
+.login-logo-icon { width: 60px; height: 60px; background: #185FA5; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
+.login-logo-icon svg { width: 30px; height: 30px; fill: white; }
+.login-logo h1 { font-size: 20px; font-weight: 600; color: #1a1a1a; }
+.login-logo p { font-size: 13px; color: #888; margin-top: 4px; }
+.login-tabs { display: flex; background: #F5F5F0; border-radius: 10px; padding: 4px; margin-bottom: 1.5rem; }
+.login-tab { flex: 1; padding: 8px; text-align: center; font-size: 14px; border-radius: 8px; cursor: pointer; color: #888; }
+.login-tab.active { background: white; color: #185FA5; font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.field-label { font-size: 12px; color: #666; margin-bottom: 6px; display: block; font-weight: 500; }
+.field-group { margin-bottom: 1rem; }
+select, input[type="text"], input[type="password"], input[type="date"], input[type="number"] {
+  width: 100%; padding: 10px 14px; font-size: 14px; border-radius: 10px;
+  border: 1.5px solid #E5E5E5; background: white; color: #1a1a1a; font-family: inherit;
+}
+body.lang-en select, body.lang-en input { direction: ltr; }
+body.lang-ar select, body.lang-ar input, body.lang-ur select, body.lang-ur input { direction: rtl; }
+select:focus, input:focus { outline: none; border-color: #185FA5; }
+.btn-primary { width: 100%; padding: 11px; background: #185FA5; color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.btn-primary:hover { background: #0C447C; }
+.hint { font-size: 11px; color: #aaa; text-align: center; margin-top: 1rem; }
+
+/* NAV */
+.nav { background: white; border-bottom: 1px solid #EAEAEA; padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between; height: 56px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.nav-brand { display: flex; align-items: center; gap: 10px; }
+.nav-icon { width: 34px; height: 34px; background: #185FA5; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.nav-icon svg { width: 18px; height: 18px; fill: white; }
+.nav-title { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+.nav-user { display: flex; align-items: center; gap: 12px; }
+.nav-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+.nb-w { background: #E6F1FB; color: #185FA5; }
+.nb-s { background: #EAF3DE; color: #3B6D11; }
+.nb-t { background: #FAEEDA; color: #854F0B; }
+.nav-username { font-size: 14px; font-weight: 500; color: #1a1a1a; }
+.nav-logout { font-size: 12px; color: #888; cursor: pointer; padding: 5px 10px; border: 1px solid #E5E5E5; border-radius: 8px; }
+
+/* MAIN TABS */
+.main-tabs { display: flex; border-bottom: 1px solid #EAEAEA; background: white; padding: 0 1.5rem; overflow-x: auto; }
+.main-tab { padding: 14px 18px; font-size: 14px; cursor: pointer; color: #888; border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 500; white-space: nowrap; }
+.main-tab.active { color: #185FA5; border-bottom-color: #185FA5; font-weight: 600; }
+
+/* CONTENT */
+.content { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+.page { display: none; } .page.active { display: block; }
+.tab-section { display: none; } .tab-section.active { display: block; }
+
+/* STATS */
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.stat-card { background: white; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,0.04); border: 1px solid #EAEAEA; }
+.stat-label { font-size: 12px; color: #888; margin-bottom: 6px; font-weight: 500; }
+.stat-value { font-size: 28px; font-weight: 700; color: #1a1a1a; }
+.stat-sub { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+/* CARDS */
+.card { background: white; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); border: 1px solid #EAEAEA; overflow: hidden; margin-bottom: 1.5rem; }
+.card-header { padding: 1rem 1.25rem; border-bottom: 1px solid #EAEAEA; display: flex; align-items: center; justify-content: space-between; background: #FAFAFA; flex-wrap: wrap; gap: 8px; }
+.card-title { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+.card-body { padding: 1.25rem; }
+.card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* TABLE */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 580px; }
+th { padding: 10px 12px; background: #FAFAFA; color: #666; font-weight: 600; font-size: 12px; border-bottom: 1px solid #EAEAEA; white-space: nowrap; }
+body.lang-ar th, body.lang-ur th { text-align: right; }
+body.lang-en th { text-align: left; }
+td { padding: 10px 12px; border-bottom: 1px solid #F0F0F0; color: #1a1a1a; vertical-align: middle; }
+body.lang-ar td, body.lang-ur td { text-align: right; }
+body.lang-en td { text-align: left; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #FAFAFA; }
+.totals-row td { background: #F0F7FF !important; font-weight: 700; border-top: 2px solid #B5D4F4; font-size: 13px; color: #185FA5; }
+.tp { display: inline-flex; align-items: center; border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 600; }
+.tp-b { background: #E6F1FB; color: #185FA5; }
+.tp-g { background: #EAF3DE; color: #3B6D11; }
+.tp-a { background: #FAEEDA; color: #854F0B; }
+
+/* BADGES */
+.badge { display: inline-flex; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.st-p { background: #FAEEDA; color: #854F0B; }
+.st-a { background: #EAF3DE; color: #3B6D11; }
+.st-r { background: #FCEBEB; color: #A32D2D; }
+.rl-w { background: #E6F1FB; color: #185FA5; }
+.rl-t { background: #FAEEDA; color: #854F0B; }
+.rl-s { background: #EAF3DE; color: #3B6D11; }
+
+/* BUTTONS */
+.btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; border: none; font-family: inherit; }
+.btn-blue { background: #185FA5; color: white; }
+.bsg { background: #EAF3DE; color: #3B6D11; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-weight: 600; font-family: inherit; }
+.bsr { background: #FCEBEB; color: #A32D2D; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-weight: 600; font-family: inherit; }
+.bsa { background: #FAEEDA; color: #854F0B; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-weight: 600; font-family: inherit; }
+.bsg:hover { background: #C0DD97; } .bsr:hover { background: #F7C1C1; } .bsa:hover { background: #FAC775; }
+.btn-outline { background: transparent; border: 1px solid #E5E5E5; border-radius: 8px; padding: 6px 14px; font-size: 12px; color: #666; cursor: pointer; font-family: inherit; font-weight: 500; }
+.btn-pdf { background: #C0392B; color: white; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; }
+.btn-excel { background: #1e7e34; color: white; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; }
+.action-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+body.lang-ar .action-btns, body.lang-ur .action-btns { justify-content: flex-end; }
+
+/* WORKERS GRID */
+.workers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+.worker-card { background: white; border: 1.5px solid #EAEAEA; border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.2s; }
+.worker-card:hover { border-color: #185FA5; }
+.worker-card.selected { border-color: #185FA5; background: #F0F7FF; }
+.worker-avatar { width: 42px; height: 42px; border-radius: 50%; background: #E6F1FB; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #185FA5; margin-bottom: 8px; }
+.worker-name { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+.worker-hours { font-size: 11px; color: #888; margin-top: 4px; }
+.worker-pending { font-size: 10px; background: #FAEEDA; color: #854F0B; padding: 2px 8px; border-radius: 20px; display: inline-block; margin-top: 5px; font-weight: 600; }
+
+/* PERIOD BAR */
+.period-bar { background: white; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid #EAEAEA; }
+.period-label { font-size: 11px; color: #888; font-weight: 500; }
+.period-value { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-top: 2px; }
+.period-nav { display: flex; gap: 8px; }
+.period-btn { background: #F5F5F0; border: 1px solid #E5E5E5; border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; color: #666; font-family: inherit; font-weight: 500; }
+
+/* DATE LOCKED */
+.date-locked { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1.5px solid #E5E5E5; border-radius: 10px; background: #F5F5F0; }
+.date-locked-text { font-size: 13px; color: #1a1a1a; font-weight: 500; flex: 1; }
+.date-locked-badge { font-size: 10px; background: #E6F1FB; color: #185FA5; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+
+/* ADD ENTRY */
+.add-entry-card { background: white; border: 1px solid #EAEAEA; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+.add-entry-title { font-size: 15px; font-weight: 600; margin-bottom: 1.25rem; color: #1a1a1a; display: flex; align-items: center; gap: 8px; }
+.add-entry-title::before { content:""; width:4px; height:18px; background:#185FA5; border-radius:2px; display:inline-block; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.checkbox-group { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1.5px solid #E5E5E5; border-radius: 10px; cursor: pointer; width: fit-content; }
+.checkbox-group input { width: 16px; height: 16px; cursor: pointer; margin: 0; }
+.checkbox-group label { font-size: 13px; color: #1a1a1a; cursor: pointer; font-weight: 500; }
+.btn-add { background: #185FA5; color: white; border: none; border-radius: 10px; padding: 11px 24px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; font-family: inherit; }
+
+/* MANAGE */
+.manage-form { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end; margin-bottom: 1.5rem; }
+.manage-form .field-group { margin: 0; }
+.section-header { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 0.875rem; }
+
+/* REPORTS */
+.report-filters { background: white; border: 1px solid #EAEAEA; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; }
+.report-type-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.rtype-btn { padding: 7px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; font-weight: 500; border: 1.5px solid #E5E5E5; background: white; color: #666; font-family: inherit; }
+.rtype-btn.active { background: #185FA5; border-color: #185FA5; color: white; font-weight: 600; }
+.workers-checkboxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
+.wcheck { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1.5px solid #E5E5E5; border-radius: 8px; cursor: pointer; }
+.wcheck input { width: 15px; height: 15px; cursor: pointer; margin: 0; }
+.wcheck label { font-size: 13px; cursor: pointer; color: #1a1a1a; }
+.wcheck.checked { border-color: #185FA5; background: #F0F7FF; }
+.report-result-header { background: linear-gradient(135deg, #1a3d6b 0%, #185FA5 100%); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; color: white; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.report-result-title { font-size: 16px; font-weight: 600; }
+.report-result-sub { font-size: 12px; opacity: 0.8; margin-top: 3px; }
+.report-summary-pills { display: flex; gap: 10px; flex-wrap: wrap; }
+.r-pill { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 600; }
+.no-results { padding: 3rem; text-align: center; color: #aaa; font-size: 14px; background: white; border-radius: 12px; border: 1px solid #EAEAEA; }
+
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+.modal-box { background: white; border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); padding: 2rem; width: 100%; max-width: 420px; }
+.modal-title { font-size: 17px; font-weight: 700; color: #1a1a1a; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px; }
+.modal-title-icon { width: 32px; height: 32px; background: #E6F1FB; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem; }
+body.lang-en .modal-actions { justify-content: flex-start; }
+.modal-cancel { background: #F5F5F0; border: 1px solid #E5E5E5; border-radius: 10px; padding: 10px 20px; font-size: 14px; cursor: pointer; color: #1a1a1a; font-family: inherit; font-weight: 500; }
+.modal-confirm { background: #185FA5; border: none; border-radius: 10px; padding: 10px 20px; font-size: 14px; cursor: pointer; color: white; font-weight: 600; font-family: inherit; }
+.modal-confirm.danger { background: #A32D2D; }
+
+.empty-state { padding: 3rem; text-align: center; color: #aaa; font-size: 14px; }
+.empty-icon { font-size: 36px; margin-bottom: 8px; }
+.food-yes { color: #3B6D11; font-size: 15px; font-weight: 700; }
+.food-no { color: #ccc; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: white; padding: 10px 20px; border-radius: 10px; font-size: 13px; z-index: 9999; display: none; font-weight: 500; }
+.toast.show { display: block; animation: fadeup 0.2s ease; }
+@keyframes fadeup { from{opacity:0;transform:translateX(-50%) translateY(10px);} to{opacity:1;transform:translateX(-50%) translateY(0);} }
+.loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); display: none; align-items: center; justify-content: center; z-index: 2000; }
+.loading-overlay.show { display: flex; }
+.loading-spinner { width: 40px; height: 40px; border: 4px solid #E5E5E5; border-top-color: #185FA5; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body class="lang-ar">
+
+<div class="lang-bar">
+  <span class="lang-bar-label" id="llabel">اللغة:</span>
+  <button class="lang-btn active" id="lb-ar" onclick="setLang('ar')">العربية</button>
+  <button class="lang-btn" id="lb-en" onclick="setLang('en')">English</button>
+  <button class="lang-btn" id="lb-ur" onclick="setLang('ur')">اردو</button>
+</div>
+
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
+      <h1 id="lTitle">نظام الساعات الإضافية</h1>
+      <p id="lSub">شركة مصنع هركو للتبريد المحدودة</p>
+    </div>
+    <div class="login-tabs">
+      <div class="login-tab active" id="tabW" onclick="setLoginType('worker')">موظف</div>
+      <div class="login-tab" id="tabS" onclick="setLoginType('supervisor')">مشرف</div>
+    </div>
+    <div id="wSelectGroup" class="field-group">
+      <label class="field-label" id="lSelectW">اختر اسمك</label>
+      <select id="workerSelect"><option value="">--</option></select>
+    </div>
+    <div id="sPassGroup" class="field-group" style="display:none;">
+      <label class="field-label" id="lSPass">كلمة المرور</label>
+      <input type="password" id="supervisorPass" />
+    </div>
+    <div id="wPinGroup" class="field-group">
+      <label class="field-label" id="lPin">رمز الدخول</label>
+      <input type="password" id="workerPass" />
+    </div>
+    <button class="btn-primary" onclick="doLogin()" id="btnLogin">دخول</button>
+    <p class="hint" id="lHint">موظفون: رمز 1234 — مشرف: admin123</p>
+  </div>
+</div>
+
+<div id="mainApp" style="display:none;">
+  <div class="nav no-print">
+    <div class="nav-brand">
+      <div class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
+      <span class="nav-title" id="navTitle">هركو — الساعات الإضافية</span>
+    </div>
+    <div class="nav-user">
+      <span class="nav-badge" id="userBadge"></span>
+      <span class="nav-username" id="userName"></span>
+      <span class="nav-logout" onclick="logout()" id="btnLogout">خروج</span>
+    </div>
+  </div>
+
+  <!-- WORKER PAGE -->
+  <div id="workerPage" class="page">
+    <div class="main-tabs no-print">
+      <div class="main-tab active" onclick="showWorkerTab('entries')" id="wtab1">سجلاتي</div>
+      <div class="main-tab" onclick="showWorkerTab('myreports')" id="wtab2">تقاريري</div>
+    </div>
+    <div class="content">
+      <div id="wEntries" class="tab-section active">
+        <!-- PDF HEADER (print only) -->
+        <div class="pdf-header print-only" id="wPdfHeader">
+          <div class="pdf-header-logo"><img id="wPdfLogo" src="" alt="HRCO"/></div>
+          <div class="pdf-header-info">
+            <div class="pdf-header-company" id="wPdfCompany">شركة مصنع هركو للتبريد المحدودة</div>
+            <div class="pdf-header-title" id="wPdfTitle">تقرير الساعات الإضافية</div>
+            <div class="pdf-header-date" id="wPdfDate"></div>
+          </div>
+          <div class="pdf-header-right" id="wPdfRight"></div>
+        </div>
+        <div class="period-bar no-print">
+          <div><div class="period-label" id="wPLabel">الفترة الحالية</div><div class="period-value" id="workerPeriod"></div></div>
+          <div class="period-nav">
+            <button class="period-btn" onclick="changePeriod(-1)" id="btnPW">◀ السابقة</button>
+            <button class="period-btn" onclick="changePeriod(1)" id="btnNW">التالية ▶</button>
+          </div>
+        </div>
+        <div class="stats-row no-print">
+          <div class="stat-card"><div class="stat-label" id="ws1l">إجمالي الساعات</div><div class="stat-value" id="wTotalH">0</div><div class="stat-sub" id="ws1s">هذه الفترة</div></div>
+          <div class="stat-card"><div class="stat-label" id="ws2l">ساعات معتمدة</div><div class="stat-value" id="wApprH">0</div><div class="stat-sub" id="ws2s">موافق عليها</div></div>
+          <div class="stat-card"><div class="stat-label" id="ws3l">أيام بدل طعام</div><div class="stat-value" id="wFoodD">0</div><div class="stat-sub" id="ws3s">هذه الفترة</div></div>
+        </div>
+        <div class="add-entry-card no-print">
+          <div class="add-entry-title" id="addTitle">إضافة ساعات إضافية</div>
+          <div class="form-row">
+            <div class="field-group" style="margin:0;"><label class="field-label" id="lDate">التاريخ (اليوم تلقائياً)</label>
+              <div class="date-locked"><span style="font-size:16px;">📅</span><span class="date-locked-text" id="todayTxt">—</span><span class="date-locked-badge" id="todayBadge">اليوم</span></div>
+            </div>
+            <div class="field-group" style="margin:0;"><label class="field-label" id="lHours">عدد الساعات</label><input type="number" id="entryHours" min="0.5" max="16" step="0.5"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field-group" style="margin:0;"><label class="field-label" id="lProject">اسم المشروع</label><input type="text" id="entryProject"/></div>
+            <div class="field-group" style="margin:0;"><label class="field-label" id="lCity">المدينة</label><select id="entryCity"></select></div>
+          </div>
+          <div class="checkbox-group"><input type="checkbox" id="entryFood"/><label for="entryFood" id="lFood">يوجد بدل طعام لهذا اليوم</label></div>
+          <br><button class="btn-add" onclick="addEntry()" id="btnAddE">إضافة السجل</button>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" id="wTableT">سجلات الساعات الإضافية</span>
+            <div class="card-actions no-print">
+              <button class="btn-excel" onclick="exportWExcel()">Excel ↓</button>
+              <button class="btn-pdf" onclick="printWorkerTable()">🖨 PDF</button>
+            </div>
+          </div>
+          <div id="wTableBody"><div class="empty-state"><div class="empty-icon">📋</div><span id="emptyW">لا توجد سجلات بعد.</span></div></div>
+        </div>
+      </div>
+      <div id="wMyReports" class="tab-section">
+        <div id="myReportContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPERVISOR PAGE -->
+  <div id="supervisorPage" class="page">
+    <div class="main-tabs no-print">
+      <div class="main-tab active" id="sTab1" onclick="showSupTab('overview')">المراقبة والاعتماد</div>
+      <div class="main-tab" id="sTab2" onclick="showSupTab('reports')">التقارير</div>
+      <div class="main-tab" id="sTab3" onclick="showSupTab('manage')">إدارة الموظفين</div>
+    </div>
+    <div class="content">
+      <div id="supOverview" class="tab-section active">
+        <!-- PDF HEADER (print only) -->
+        <div class="pdf-header print-only" id="sPdfHeader">
+          <div class="pdf-header-logo"><img id="sPdfLogo" src="" alt="HRCO"/></div>
+          <div class="pdf-header-info">
+            <div class="pdf-header-company" id="sPdfCompany">شركة مصنع هركو للتبريد المحدودة</div>
+            <div class="pdf-header-title" id="sPdfTitle">تقرير الساعات الإضافية</div>
+            <div class="pdf-header-date" id="sPdfDate"></div>
+          </div>
+          <div class="pdf-header-right" id="sPdfRight"></div>
+        </div>
+        <div class="period-bar no-print">
+          <div><div class="period-label" id="sPLabel">الفترة الحالية</div><div class="period-value" id="supPeriod"></div></div>
+          <div class="period-nav">
+            <button class="period-btn" onclick="changePeriod(-1)" id="btnPS">◀ السابقة</button>
+            <button class="period-btn" onclick="changePeriod(1)" id="btnNS">التالية ▶</button>
+          </div>
+        </div>
+        <div class="stats-row no-print">
+          <div class="stat-card"><div class="stat-label" id="ss1l">ساعات معتمدة</div><div class="stat-value" id="sTotH">0</div><div class="stat-sub" id="ss1s">جميع الموظفين</div></div>
+          <div class="stat-card"><div class="stat-label" id="ss2l">بانتظار الموافقة</div><div class="stat-value" id="sPendC">0</div><div class="stat-sub" id="ss2s">سجل</div></div>
+          <div class="stat-card"><div class="stat-label" id="ss3l">معتمدة</div><div class="stat-value" id="sApprC">0</div><div class="stat-sub" id="ss3s">سجل</div></div>
+        </div>
+        <div class="section-header no-print" id="empHeader">الموظفون</div>
+        <div class="workers-grid no-print" id="workersGrid"></div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" id="sTableT">جميع السجلات</span>
+            <div class="card-actions no-print">
+              <button class="btn-excel" onclick="exportSExcel()">Excel ↓</button>
+              <button class="btn-pdf" onclick="printSupTable()">🖨 PDF</button>
+            </div>
+          </div>
+          <div id="sTableBody"><div class="empty-state"><div class="empty-icon">📋</div>لا توجد سجلات.</div></div>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div id="supReports" class="tab-section">
+        <div class="report-filters no-print">
+          <div style="font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:1rem;" id="rTitle">إعداد التقرير</div>
+          <div style="font-size:12px;color:#888;font-weight:500;margin-bottom:8px;" id="rTypeLabel">نوع التقرير</div>
+          <div class="report-type-tabs">
+            <button class="rtype-btn active" onclick="setRType('daily')" id="rdaily">يومي</button>
+            <button class="rtype-btn" onclick="setRType('weekly')" id="rweekly">أسبوعي</button>
+            <button class="rtype-btn" onclick="setRType('monthly')" id="rmonthly">شهري</button>
+            <button class="rtype-btn" onclick="setRType('yearly')" id="ryearly">سنوي</button>
+            <button class="rtype-btn" onclick="setRType('custom')" id="rcustom">فترة محددة</button>
+          </div>
+          <div id="rDateFilters" style="margin-top:1rem;"></div>
+          <div style="font-size:12px;color:#888;font-weight:500;margin-top:1rem;margin-bottom:8px;" id="rWFilter">الموظفون</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <button class="btn-outline" onclick="selectAllWorkers(true)" id="btnSelAll">تحديد الكل</button>
+            <button class="btn-outline" onclick="selectAllWorkers(false)" id="btnSelNone">إلغاء الكل</button>
+          </div>
+          <div class="workers-checkboxes" id="rWorkersCheck"></div>
+          <div style="margin-top:1.25rem;">
+            <button class="btn btn-blue" onclick="generateReport()" id="btnGenRep">إنشاء التقرير</button>
+          </div>
+        </div>
+        <div id="reportResult" style="display:none;">
+          <!-- PDF HEADER -->
+          <div class="pdf-header print-only" id="rPdfHeader">
+            <div class="pdf-header-logo"><img id="rPdfLogo" src="" alt="HRCO"/></div>
+            <div class="pdf-header-info">
+              <div class="pdf-header-company" id="rPdfCompany">شركة مصنع هركو للتبريد المحدودة</div>
+              <div class="pdf-header-title" id="rPdfTitle"></div>
+              <div class="pdf-header-date" id="rPdfDate"></div>
+            </div>
+            <div class="pdf-header-right" id="rPdfRight"></div>
+          </div>
+          <div class="report-result-header no-print">
+            <div>
+              <div class="report-result-title" id="repTitle">تقرير الساعات الإضافية</div>
+              <div class="report-result-sub" id="repSub"></div>
+            </div>
+            <div class="report-summary-pills" id="repPills"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title" id="repTableTitle">نتائج التقرير</span>
+              <div class="card-actions no-print">
+                <button class="btn-excel" onclick="exportRepExcel()">Excel ↓</button>
+                <button class="btn-pdf" onclick="printReport()">🖨 PDF</button>
+              </div>
+            </div>
+            <div id="repTableBody"></div>
+          </div>
+        </div>
+        <div id="noReport" class="no-results">
+          <div style="font-size:36px;margin-bottom:12px;">📊</div>
+          <div id="noRepMsg">اختر نوع التقرير والموظفين ثم اضغط "إنشاء التقرير"</div>
+        </div>
+      </div>
+
+      <!-- MANAGE -->
+      <div id="supManage" class="tab-section">
+        <div class="card" style="margin-bottom:1.5rem;">
+          <div class="card-header"><span class="card-title" id="addWTitle">إضافة موظف جديد</span></div>
+          <div class="card-body">
+            <div class="manage-form">
+              <div class="field-group"><label class="field-label" id="lNewName">الاسم الكامل</label><input type="text" id="newWName"/></div>
+              <div class="field-group"><label class="field-label" id="lNewRole">الصفة الوظيفية</label>
+                <select id="newWRole"><option value="worker" id="rW">عامل</option><option value="technician" id="rT">فني</option><option value="supervisor" id="rS">مشرف</option></select>
+              </div>
+              <div class="field-group"><label class="field-label" id="lNewPin">رمز الدخول (4 أرقام)</label><input type="text" id="newWPin" maxlength="4"/></div>
+              <div><button class="btn btn-blue" onclick="addWorker()" id="btnAW">إضافة</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title" id="wListTitle">قائمة الموظفين</span><span style="font-size:12px;color:#888;" id="wCount"></span></div>
+          <div id="wManageTable"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div id="editModal" style="display:none;" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title"><div class="modal-title-icon">✏️</div><span id="eModalT">تعديل السجل</span></div>
+    <div class="modal-grid">
+      <div class="field-group" style="margin:0;"><label class="field-label" id="eLDate">التاريخ</label><input type="date" id="editDate"/></div>
+      <div class="field-group" style="margin:0;"><label class="field-label" id="eLHours">الساعات</label><input type="number" id="editHours" min="0.5" max="16" step="0.5"/></div>
+    </div>
+    <div class="modal-grid">
+      <div class="field-group" style="margin:0;"><label class="field-label" id="eLProj">المشروع</label><input type="text" id="editProject"/></div>
+      <div class="field-group" style="margin:0;"><label class="field-label" id="eLCity">المدينة</label><select id="editCity"></select></div>
+    </div>
+    <div class="modal-grid">
+      <div class="field-group" style="margin:0;"><label class="field-label" id="eLStatus">الحالة</label>
+        <select id="editStatus"><option value="pending" id="eStP">بانتظار</option><option value="approved" id="eStA">معتمد</option><option value="rejected" id="eStR">مرفوض</option></select>
+      </div>
+      <div class="field-group" style="margin:0;display:flex;align-items:flex-end;">
+        <div class="checkbox-group" style="width:100%;"><input type="checkbox" id="editFood"/><label for="editFood" id="eLFood">بدل طعام</label></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeEditModal()" id="eCancelB">إلغاء</button>
+      <button class="modal-confirm" onclick="confirmEdit()" id="eConfirmB">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div id="deleteModal" style="display:none;" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title"><div class="modal-title-icon">🗑️</div><span id="dModalT">حذف الموظف</span></div>
+    <p style="font-size:14px;color:#666;line-height:1.6;" id="dConfirmTxt"></p>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeDelModal()" id="dCancelB">إلغاء</button>
+      <button class="modal-confirm danger" onclick="confirmDel()" id="dConfirmB">حذف</button>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ================================================================
+// LOGO embedded as base64
+// ================================================================
+const LOGO_SRC = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOcAAABWCAIAAAC7ABanAAAWBElEQVR4nO2deXwVRbbHz6nqvje52RdIwhpCDItsskYFBJTNAXEdH4oyoo4j47iPzjx1HJ1Fnm8cR0ZxHHF7isuo4wYi20hAQLZIkECABEJYskEQktylu6rO++MmIUDuTe5CFuzvJ59PPp/czqlzu39dXXXq1GkkIrCw6FCwtnbAwiJgLNVadDws1Vp0PDq2arfklb73yU63R7S1IxatSsdWbVlFzZ+e/+6eR1dtzC1ta18sWg+trR0IiUi7pqT729xj3+1YdfXUzFnX9+3VM76tnbI453TsvpYIiJQU1U6X+/3PCm9/aPlbH+SfOOlua78szi0dW7X1IClTmtVlZbXPvph754PLV+QUS6Xa2iuLc8X5odo6lHRJ6czfffyBJ1Y/+Luvv99Z0dYeWZwTOva49iwQSElRi6itXFO2+bvy62f0nXl1Zlrn2LZ2zCKcnFd9bT1IJKV58vgPrtfe2XnH/as+/Hz3yRpPW3tlETbOS9XWQcqQZvX+gyefem7Lx0sK2todi7BxPqvWi5IuInX8mBVYOH84/1XrHTDo+o/hm/5YsK6lRcfDUq1Fx8NSrUXH4zyL13ZIDhys/HDxRpfLjcgASClyu82plw8ek92/rV1rp/hUrSorpxMneZ8LwtWS22MUH6xM794pwm4Ll83zgO07ix+b99GuveVEAoCQaQz1qRP6ZvVKa2vX2i8+VSvyd6mnn4GrpuHsm1hyUugtSan+vnBFrcv9yC+n9c/qFrrB84DV6/Mfm/dhecUJKdwAwLiNgbx3zsS7b5vImTV484nvUxMRwcsr+IuvmDfNkZ9+oTyhri3ZdB2A1ucenH3vglff/U9N7Y89gPrB5+vvf+Lt8oof6iVrj4mJ/ONvfnrP7ZMtyfrH39khm80jJdu9R933iHnHXPXt5lBaIiKGqEznsaqaefO/uP2hV9Zv2ROKwY6LKcRLbyx78tmPq6udXski41m9016eN+enV13c1t51APzOxhAI4IRSOmLcmg3G1jx+wzVw2yye3jOUJkkZpNjWvOKfP/zPWdeNvf3mcZ0S22l2S2n5iZwNO4tLKqSUrMX9nyJI7Rx36w1jdL3p0/vyG0vnv/YfpQQpEwABkQg6JUVt3b7v63X5CBict4qUbrMN7NNtTHbf6KiIMz9VatXa/G07SxCVUpgQ65g+8aLUlITg2vIilfpy5bZtOw5oHCBYt+vcIxXliBx8YY9LR2TZbLr/g5uPISCAJDpGMqKmxvbWIrFytbzjFnbd1RgbtNQQgKTpdkpt4aKctZt2333rhGkThwVr7VzxzcaCP/zt06L9lQAEEEDVCMbtvbpGz7z6El+q/X7XYQAkJequNBGA/ObbgvWbi0L2Ggno4uGZTz98XUZ6auMPlKIVOXmfLd8phZNxe1yMfeTQjFBVK9XKNTuWri5QwhmiagHAu4o5dcLgJx68LqVTnJ/jWhr5QgA3kUfK6EOH9KfmmZ8u0X71Cxg/lnEetI+khFRi997DDz75ztpv99w5a1xmu5k4Fx0of+SpdyqOu6Rw1v+N/F6YU58SqaioRGQ+D3ZE2s4unkIkpZAhuFzvALKNucVP//XfC+bd7nDYGz5GRLvNJoVLCjcROeyRuhb8tau3CXa7JoVbCbfvk+P/vJ1hkC3L2WWP+PzZx2/m3OfDLYB4rbflaqU4QMy2782f34OTJ2p338EGDWi5kbORwqOQf/zl5nVb995587gbr8puD6GxNRt2VVTVSlk3B0XkjDfz2FLSIGrRBorqGg/XIzD0vqkRREDKIFJASklP3s6S73cfGHVRVjjb8AcCECAyZkM8U21KCVKn9lEzbsfTvzwRKWl4fytpbMwtLCouy+rdxVdjAa8yIIAC+EFJG2HM0uXi283mbx6w33h9oHZOd1pK01VaKv/w3Cc563f94pYJw4dkMt99VStQ43Q1SBBR65oWN+XyoY5Ie5MbexiiEPKLZZsPl51ofHl8MWPqiL59ujMWtlpVnLHKypNfrtxyosYNpIhISFnbqinFhKhFRUdMv+KilM6Jpqw7CYioMZ7zzffbdh0kJQAY5+z66SNSOsVLUgCAgAyx5NDRJau2mIb0DsakoFqnP+eDXBtDAIPouJQJP/zgyd0Womq9KOkBZGs3Fh48XPnGC7/olpYcus2g0RpGPoiM8xuvHX3Pz6b4OV4ptT2/5EhFbYtUO2V4WJw8g5iYiIWLcpT0AAAy5ucJey5AxhPjYufcNOHsYZ7T6cwrOEIgkaHNxufcNCEr47RjTCEOlVXlbi+ucx6RcX99VvBfrM6qIoyMDNrImSaJlDRMQ7k9ZphshgoCahrvkdrMLeRym0JIaNNSf8lJsWGYEYWAJGmaTQzNTVH/gCIipZxnxf45Y11TE+GsoYUv2mM0m3FsT2F21DWWmBDl/yBN442nX4jMVwDh3BHQkAMxDJ2xrmm80QiVAWtyXHfGH7Wz1MkYS4iPbnnIz8qeaQYCcnvMvJ0lQwakI2KTnSkiuj1G4yGvEOr4iRpHhK11Ol9EMAyxPf9QQJ290+VxuQ1SwbsolZKNWiQAp9vjcnsaT0qRgWmKOkEiAoDHFI3bRYY/nHTuLSolamkIxVJt05hC1gdTlRTm/IVLFq/ItWlak1cYGSgp9xdXkDIBQCmzcP+ROfctQMTWeZoxBjXV7n0Hy6n+zlGKpG85kjLLK4898cy/oqPsIljVIhJJPHC4gqTHW5KisrLq8T+/HxMd2dgmY1hysIK8IQKlDEM+/swH0VE2orqelSFWHD1RcugoUd05VySV9OeVpdqm6d4lCRARkICIlGHQnqIy//9CStSFHYicbmPnnlYtPUZEpLx9FSGyqAh7arKvQD0SkdswdhWWAmIg6ydNtatMr9qIlMcwCorKz7SJQFLUx6dJEewpKj3tZkYgpRo6WkQe7YjonOxvDav1VEtETrfBtUj/MWfGbU63KWQbV46ZcOmAi4dmbNxWIoWbSAKBks1OEBtdK6IWHB9uEAGAMRsyfcakIf36+E2sa9E3amG7XgkigG+bjYa/SjYVZql3ngBunJHdNc1fmmHrqZYxNmPKsAsy0pTvWkZCCFNSp+TYhLjoVnOsSeJiHc89detz/1iydGWuy2M0O14kAFLy1IoXImehrjwFASJPToq98arsu2Zfgc0sYyBjjCEnaCelpRARu3ZJmHPTuFnXjvV/aOupVtf5VZOHXTW53eUb+CKlU9yzT9x056zxpWUnhBR+RMAQDSH+9o/FuwrLSRnI9PTuSY/eMyPCbmvNcmNEYLfrGT06d0ltIruAMawPGhAyvVNi7Nw5k3r16CxCWkYOG0TgiLRnpHdO8TmwOYU1rm2GC3qlXdCy7Ig331uNrJIUILLEuOjJ44ecY9cCAxE9noYFahbpiBiT3TejR0rbehUclmqbZn9J+d59ZUTUbLYAIjLGtmwr2pZf7J0pA5AppMttREa0fUKF22Pkbi+udbqLSyqW5+Q1jDuFEE6/q6btGUu1TbN4Re4LC1cqZbYsAorIUEkTSAFg/XSzXbwSq+q487d/XHSkosabwkJ1HgIAtPKSbxixVNs0nCMpSaqli7SnYubIGNcvHdW3PWSuAQAicc6Ukkoap/7GbX16d+nZtVNbehYClmqbxjQV4zZADGi1CRER+djsjDkzL2tuCt9KKEUeUzJefwshIvJ+mZ1/PfcnjbNvOxaWapsmvXun4YO6SSVamBGhlEJgsbFRo7P7Xn/lyPYjiIgIfeTQ3oeOHNM4k0rZ7fYRg3vPvOaSTkntdNdTS7BU2zQzpoyYMWVEW3sRBpISYp5/anZbexFmOup43OLHjKVai45H640QhJQ56wv2FJXadNBsOvhINULGEhNixo7qGxsTrmRzi/ONVlStKT9cvOnrdXuE6fKzb5NxvWtafN/eqZZqLXzRqtkzGgMp3Eo2tyRDouMGwC1agdbdENeiLRbEWrx/yOLHiRX5appNuYXrtuwFKZEBARLBlAmDgygFuXp9/ta8/Zyhd/lM1/mkywb1yezq/fTgkaNLVmyrdbpDebToNi05KS4rI21gvx7aWYYOlR7L3334cNmxmppaFWx2l82uJSbG9u6RcmFWV4fjtFpMB48c21FwqLS8qqbGqULYzKPbtMT4mMxeqQP7dW92WdFSbdOs37J7wVtrvKkFiBwYT0uJC0K1y3PyPly8XQkDQCHTCKhbanyDaosPVrz05gqXW3m37gCAdwMFADSXxoDkPYDIW0DDbuOXjMp67N6re9WncQkh3/gg5/V3V1dWnazbyBXccp13DkKk2/jQAelPPHhtvwu6AoAp5CtvrVj073VHq6pVKPbrmiAg0m3asAG9HntgRv+s7n4Ot57FTWOzMSU8SrqV9CjpVsJjswdzh0fadSXc9XY8Gle6fqqGja5xGwfvR94fkoZSplKmUsLvjwkkgUgpUwmPkobb41m9oeivr3xpmnU7BdZ8u+t/FyyuPFYthaGkoaRBSgWe00OkDCXcShoet3vz9oN/nv+py20AwIrVec//c2nlsWrRYJ+CsA8AUP8tTI/bvWl7ybMvLnY6DT/HW31t0yDy0y9A0FsCG3c/xM8asiNnDcYZ07OH95594zj/e/0AgDE0hVy7cddnX25xewwARUqSMIpLjladqElJjgeA3LwiJUEKj7cr02z6VZOG9endpeWJ6shBGPKrVXm79h5WSgCRNF3fbSssrzyR3r3Txu/2ArI6+8gibLZpky66ICMA+94mAOCTLzbt3V9OSgCREp69xWUHDld6e/QmsVTbfkBA3rNb8qTLBrfwH8Zf0j83b1/hgaNUn8+lNSrZYpiy4X5ARLtuu2bqiNGj+gXq1r4DRwv2HQUS3um0kLLW5QYAwyMa2Wf2CPs1V468ZETfQO0DwI6dhwoPHK0v20MklcdvGZdW3e0ohKgrYxamGilSEiInao19hZFBZR7atIDOMHmMgGZMjJ1uvnHXfkbtDFLK6fb32G0Sp9NdU+tGrjNl85b+MEwPSQKA04tGkpTS6QrYvhdhnr7/EZsJI7WeajlnsTGRyHVUekuKYbWEKIem2ZiUDmnWAqhw3QxnQEQAav2m3UQkRACPP85Zwd7DgY32AkmMJFIkzvgLhbdqk82u33rDmNEj++g6AqCUSrfxbl3C8J6OUGg91Woaf3DutKSk2Lc/WutymVJ6Qj+/I4d2ff6pcS++sW1vESrpVso4N8IlILnok3Xvf7YhoOAOY6ikbGF5UAAAQF3TnC7PqrU7FIFdY76+DSIKodZt2rP/cCU1CmgJScFP5JtC43z0qL6jRwXz3D93tOq4NiU57pFfTh+b3efvry3fmFtEJEPckm+z8cvHpg++sPM7H+16/9M91TV2JWsbbzIJIww5oMZ4gHcaEgSgWiCQmsarTtS8/OaqY8c9Snp81BFCZAiASgqgulxvptnSuyUlxLbxpvxWoA1mY9nDsgb26/H+ZxtefWfV0SqX8pbJCEFnyUmO++8aNu7SbvMX5m7cSkRSSVdYhYuAOGJwz4yeaSKQSL3G+Na8vXv2V0BLK1iREGTTtdk3XHbp8D7zF361ZFUeIlfCOOPbMEQgDRAZt3v3V8bFRA8b1PP+u6602c7/GXbbfMMoR8TtM8dfMixrwRvLvvo6T4GmhBni9sAhA1Je/PPlny3bt/Dd/PJyXUrnqRcfhAYiAvKZ144JIk983vxPCg/kKNnioW398z2zV+rzT98y9uJ+C95cVXLoqJKeU1WgGc/slTp9ytDoyEi3x9Q1Fhsb1Ts9ZVD/nloILxxoEiGkt3K3rjEAUEQ2XZs4bkh8rCO8DQVEW96X/bK6/u1PP/tyRe7fX1+2r6RKSU+IszSHwzbzmr6jhqa+8n/bl64sloqkcIZrr2xw9ThCqeLBOb9+2qiRF/V+4dWlny/bqhR4E4+IVGllzb7iynvvuDK9+7ndsWgY5lv/WrN6wz4pnN4YghTuxVnd21a1bbw2xhmbPnn4my/cfdtPR0dHRTEtIvTeMaNn/P88Mfa5p8ZmZSZoegwyW1h0S0FZOfutIYHSo2vyX56c9Zffz8pIT+G6A5EDqerq6s+XbbvmtueeeeHTw2VVTf5j/cSxoeAmiwp8N5vDEeFw2JUylTK8PzadAUNotC3Za55zHhnRzKsrfKGd8V4TUv7nAu1iDNQlNfGxB64ZP7r//Fe/2pp/xBOOGj4Tx6VfNLDzWx/kv/vvAkM6/JTFbP8g4ozJw0cMzpi/cNnHizcp0pT0SOE6cVK89v6a/6zPv+uWy2dMHn5GnWdd541ey0Me0/h86daCPaUBrI0hCmEUFh1R0gAC752ra3pUpB0AbHatodcjUh635/OvcncXlgsZwOVDRAAq3FfaKBKCTNPsftfP24VqvVwyos/Aft1ffy9nzYY9bncYFg6SkxwPzR0xJrvb8//8zjQDe1LXTxDrigUDoK/NF83ZocZ2JJ3Z+5JsOAC9Nf59meqSmjjv8ZljsvvMf3V5UUmFEgYpIUnuO1D56B/eW7oqb+6cicMGZjQcP3RQBuc5ABFSeoBAGOZHizdh4EXYlTSJZN3oXou8aHDPlE6xADBySOaijzcwblPKACK3x/PRkk1nvwCnxU0obxOM2zN7durht1ZDO1ItAMREO+67c+r0yUMTw1dTceTQtAXz4qtrArsNDIOYZgfFgBRDDsiNpt440Cwuj+CaHRABFGOakKrxOoVpSkMQ1+xKMQBk3O50NfN64Z9cMXTooIwXX/vqo8WbpEJvXAyRr91cvDH31Z9cfuFdsyf26tEZES+7uP/Dc6e9vujro8dRKQXYwvzmM0GuI+kAFBlhG9Cv63/fe3VkhB0AJo8fcv/Pj7790TfHj9dIRUHbr2+CACgy0j64f89f3zPd/2CmfanWS9hLpiXERybEB7af59IRWQBIJBEBCAFxyID0IJqeMm5IckIMY+jtvnW7fmG/Hg2f9uqR8qvbJ9XUOhlDABRSDezrL0PPS1rn+D/99r8mjB6wbUfxqZgBgWHKWpenoPBI9y5Juq5pGr/z5glTxg/aUXCotOx4jbM26JmhrukJ8dGZvVIH9OnWUOpB0/g9cyZPnzR0R8GhI2VVLrcrlPqRuq4nxkf1Tk8bcmHPZoN36Gu6YKz7Fubep46frCXl6w5CgATGnbfd7Pj9Y8H7a2ERIFZ+rUXHw1KtRcfDt2qJgps1W1ica3yqFhHAbdgQLeVatDd8v8x84IV41xwVHZPMGu0RsbBoB/jua2Nj9YfvxTdeEpdmxzEewxhY2rVoHzQzG+Mjh/OFL8onH8WUlESu6daAwaId0HwMAR0Obc5s/var5rQpds7jvBHzVnDNwsIHLX63eZ8LtBee1eb/BTJ7J3AeaXW6Fm1HAPFa5JxPn8reWSjmzLZHxyZaszSLNiLgVQaWlqr97lF8/SWRPSyOa8iYJVyLVibItTGWPYIvfFn89iEzNpqdrAmvTxYW/vGZPdNCzI2boeq4PvkKCDxx08IiOEJVrYVF62N1kBYdD0u1Fh0PS7UWHQ9LtRYdj/8HzQpMifB+2AIAAAAASUVORK5CYII=";
+
+// ================================================================
+// TRANSLATIONS
+// ================================================================
+const TR = {
+  ar: {
+    dir:"rtl",
+    lTitle:"نظام الساعات الإضافية", lSub:"شركة مصنع هركو للتبريد المحدودة",
+    tabW:"موظف", tabS:"مشرف",
+    lSelectW:"اختر اسمك", lSPass:"كلمة المرور", lPin:"رمز الدخول",
+    wPassPH:"أدخل رمز الدخول", sPassPH:"أدخل كلمة المرور",
+    btnLogin:"دخول", lHint:"موظفون: رمز 1234 — مشرف: admin123",
+    navTitle:"هركو — الساعات الإضافية", btnLogout:"خروج",
+    pLabel:"الفترة الحالية", btnPrev:"◀ السابقة", btnNext:"التالية ▶",
+    ws1l:"إجمالي الساعات", ws1s:"هذه الفترة",
+    ws2l:"ساعات معتمدة", ws2s:"موافق عليها",
+    ws3l:"أيام بدل طعام", ws3s:"هذه الفترة",
+    addTitle:"إضافة ساعات إضافية",
+    lDate:"التاريخ (اليوم تلقائياً)", todayBadge:"اليوم",
+    lHours:"عدد الساعات", hoursPH:"مثال: 3",
+    lProject:"اسم المشروع", projectPH:"مثال: مشروع الرياض A",
+    lCity:"المدينة", cityPH:"اختر المدينة",
+    cities:{"Riyadh":"الرياض","Jeddah":"جدة","Dammam":"الدمام","Makkah":"مكة المكرمة","Madinah":"المدينة المنورة","Tabuk":"تبوك","Abha":"أبها","Other":"أخرى"},
+    lFood:"يوجد بدل طعام لهذا اليوم",
+    btnAddE:"إضافة السجل", wTableT:"سجلات الساعات الإضافية",
+    emptyMsg:"لا توجد سجلات بعد.",
+    sTab1:"المراقبة والاعتماد", sTab2:"التقارير", sTab3:"إدارة الموظفين",
+    ss1l:"إجمالي الساعات", ss1s:"جميع الموظفين",
+    ss2l:"بانتظار الموافقة", ss2s:"سجل",
+    ss3l:"معتمدة", ss3s:"سجل",
+    empHeader:"الموظفون",
+    addWTitle:"إضافة موظف جديد",
+    lNewName:"الاسم الكامل", newNamePH:"مثال: محمد العمري",
+    lNewRole:"الصفة الوظيفية",
+    lNewPin:"رمز الدخول (4 أرقام)", newPinPH:"1234",
+    btnAW:"إضافة", wListTitle:"قائمة الموظفين",
+    rW:"عامل", rT:"فني", rS:"مشرف",
+    eModalT:"تعديل السجل",
+    eLDate:"التاريخ", eLHours:"الساعات", eLProj:"المشروع", eLCity:"المدينة",
+    eLStatus:"الحالة", eLFood:"بدل طعام",
+    eCancelB:"إلغاء", eConfirmB:"حفظ",
+    dModalT:"حذف الموظف", dCancelB:"إلغاء", dConfirmB:"حذف",
+    stPending:"بانتظار الموافقة", stApproved:"معتمد", stRejected:"مرفوض", stPShort:"بانتظار",
+    thDate:"التاريخ", thProject:"المشروع", thCity:"المدينة", thHours:"الساعات",
+    thFood:"بدل طعام", thStatus:"الحالة", thWorker:"الموظف", thRole:"الصفة",
+    thActions:"إجراءات", thName:"الاسم", thPin:"الرمز", thAction:"إجراء",
+    btnEdit:"تعديل", btnApprove:"اعتماد", btnReject:"رفض", btnDelete:"حذف",
+    totalLbl:"الإجمالي", hoursU:"ساعة", foodU:"يوم طعام", workU:"يوم عمل",
+    allEmp:"جميع الموظفين", recOf:"سجل", pendOf:"بانتظار",
+    toastAdded:"تم إضافة السجل ✓", toastAppr:"تم اعتماد الساعات ✓",
+    toastRej:"تم رفض السجل", toastSaved:"تم حفظ التعديلات ✓",
+    toastWAdded:"تم إضافة الموظف ✓", toastWDel:"تم حذف الموظف",
+    toastExp:"تم التصدير ✓", toastNoData:"لا توجد بيانات للتصدير",
+    errFill:"يرجى ملء جميع الحقول", errHours:"الساعات يجب أن تكون بين 0.5 و 16",
+    errSelName:"اختر اسمك أولاً", errPin:"رمز الدخول غير صحيح",
+    errPass:"كلمة المرور غير صحيحة", errPinFmt:"الرمز يجب أن يكون 4 أرقام",
+    errWName:"أدخل اسم الموظف", errSelWorkers:"اختر موظفاً على الأقل",
+    delMsg1:"هل أنت متأكد من حذف", delMsg2:"سيتم حذف جميع سجلاته نهائياً.",
+    rTitle:"إعداد التقرير", rTypeLabel:"نوع التقرير",
+    rdaily:"يومي", rweekly:"أسبوعي", rmonthly:"شهري", ryearly:"سنوي", rcustom:"فترة محددة",
+    rDateLabel:"التاريخ", rFromLabel:"من تاريخ", rToLabel:"إلى تاريخ",
+    rMonthLabel:"الشهر", rYearLabel:"السنة",
+    rWFilter:"الموظفون (اختر واحد أو أكثر)",
+    btnSelAll:"تحديد الكل", btnSelNone:"إلغاء الكل", btnGenRep:"إنشاء التقرير",
+    repDailyTitle:"التقرير اليومي", repWeeklyTitle:"التقرير الأسبوعي",
+    repMonthlyTitle:"التقرير الشهري", repYearlyTitle:"التقرير السنوي",
+    repCustomTitle:"تقرير فترة محددة",
+    noRepMsg:"اختر نوع التقرير والموظفين ثم اضغط إنشاء التقرير",
+    wtab1:"سجلاتي", wtab2:"تقاريري",
+    companyName:"شركة مصنع هركو للتبريد المحدودة",
+    generatedOn:"تاريخ الإصدار",
+    months:["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"],
+    days:["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"],
+    pFmt:(s,e,m)=>"26 "+m[s.getMonth()]+" – 25 "+m[e.getMonth()]+" "+e.getFullYear(),
+  },
+  en: {
+    dir:"ltr",
+    lTitle:"Overtime Tracking System", lSub:"HRCO Refrigeration Factory Co. Ltd.",
+    tabW:"Employee", tabS:"Supervisor",
+    lSelectW:"Select your name", lSPass:"Password", lPin:"PIN Code",
+    wPassPH:"Enter PIN", sPassPH:"Enter password",
+    btnLogin:"Login", lHint:"Employees: PIN 1234 — Supervisor: admin123",
+    navTitle:"HRCO — Overtime System", btnLogout:"Logout",
+    pLabel:"Current Period", btnPrev:"◀ Previous", btnNext:"Next ▶",
+    ws1l:"Total Hours", ws1s:"This period", ws2l:"Approved Hours", ws2s:"Approved",
+    ws3l:"Food Allowance Days", ws3s:"This period",
+    addTitle:"Add Overtime Entry",
+    lDate:"Date (auto today)", todayBadge:"Today",
+    lHours:"Hours", hoursPH:"e.g. 3",
+    lProject:"Project Name", projectPH:"e.g. Riyadh Project A",
+    lCity:"City", cityPH:"Select city",
+    cities:{"Riyadh":"Riyadh","Jeddah":"Jeddah","Dammam":"Dammam","Makkah":"Makkah","Madinah":"Madinah","Tabuk":"Tabuk","Abha":"Abha","Other":"Other"},
+    lFood:"Food allowance for this day",
+    btnAddE:"Add Entry", wTableT:"Overtime Records",
+    emptyMsg:"No records yet.",
+    sTab1:"Monitor & Approve", sTab2:"Reports", sTab3:"Manage Employees",
+    ss1l:"Total Hours", ss1s:"All employees", ss2l:"Pending", ss2s:"records",
+    ss3l:"Approved", ss3s:"records",
+    empHeader:"Employees", addWTitle:"Add New Employee",
+    lNewName:"Full Name", newNamePH:"e.g. Mohammed Al-Omari",
+    lNewRole:"Job Title", lNewPin:"PIN Code (4 digits)", newPinPH:"1234",
+    btnAW:"Add", wListTitle:"Employee List",
+    rW:"Worker", rT:"Technician", rS:"Supervisor",
+    eModalT:"Edit Record",
+    eLDate:"Date", eLHours:"Hours", eLProj:"Project", eLCity:"City",
+    eLStatus:"Status", eLFood:"Food Allowance",
+    eCancelB:"Cancel", eConfirmB:"Save",
+    dModalT:"Delete Employee", dCancelB:"Cancel", dConfirmB:"Delete",
+    stPending:"Pending Approval", stApproved:"Approved", stRejected:"Rejected", stPShort:"Pending",
+    thDate:"Date", thProject:"Project", thCity:"City", thHours:"Hours",
+    thFood:"Food Allow.", thStatus:"Status", thWorker:"Employee", thRole:"Role",
+    thActions:"Actions", thName:"Name", thPin:"PIN", thAction:"Action",
+    btnEdit:"Edit", btnApprove:"Approve", btnReject:"Reject", btnDelete:"Delete",
+    totalLbl:"Total", hoursU:"hrs", foodU:"food days", workU:"work days",
+    allEmp:"All Employees", recOf:"records", pendOf:"pending",
+    toastAdded:"Entry added ✓", toastAppr:"Hours approved ✓",
+    toastRej:"Entry rejected", toastSaved:"Changes saved ✓",
+    toastWAdded:"Employee added ✓", toastWDel:"Employee deleted",
+    toastExp:"Exported ✓", toastNoData:"No data to export",
+    errFill:"Please fill all fields", errHours:"Hours must be 0.5–16",
+    errSelName:"Select your name first", errPin:"Incorrect PIN",
+    errPass:"Incorrect password", errPinFmt:"PIN must be 4 digits",
+    errWName:"Enter employee name", errSelWorkers:"Select at least one employee",
+    delMsg1:"Are you sure you want to delete", delMsg2:"All records will be permanently deleted.",
+    rTitle:"Report Setup", rTypeLabel:"Report Type",
+    rdaily:"Daily", rweekly:"Weekly", rmonthly:"Monthly", ryearly:"Yearly", rcustom:"Custom Range",
+    rDateLabel:"Date", rFromLabel:"From Date", rToLabel:"To Date",
+    rMonthLabel:"Month", rYearLabel:"Year",
+    rWFilter:"Employees (select one or more)",
+    btnSelAll:"Select All", btnSelNone:"Clear All", btnGenRep:"Generate Report",
+    repDailyTitle:"Daily Report", repWeeklyTitle:"Weekly Report",
+    repMonthlyTitle:"Monthly Report", repYearlyTitle:"Yearly Report",
+    repCustomTitle:"Custom Period Report",
+    noRepMsg:"Select report type and employees then click Generate Report",
+    wtab1:"My Records", wtab2:"My Reports",
+    companyName:"HRCO Refrigeration Factory Co. Ltd.",
+    generatedOn:"Generated on",
+    months:["January","February","March","April","May","June","July","August","September","October","November","December"],
+    days:["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+    pFmt:(s,e,m)=>"26 "+m[s.getMonth()]+" – 25 "+m[e.getMonth()]+" "+e.getFullYear(),
+  },
+  ur: {
+    dir:"rtl",
+    lTitle:"اوور ٹائم سسٹم", lSub:"HRCO ریفریجریشن فیکٹری کمپنی",
+    tabW:"ملازم", tabS:"سپروائزر",
+    lSelectW:"اپنا نام منتخب کریں", lSPass:"پاس ورڈ", lPin:"پن کوڈ",
+    wPassPH:"پن کوڈ درج کریں", sPassPH:"پاس ورڈ درج کریں",
+    btnLogin:"داخل ہوں", lHint:"ملازمین: پن 1234 — سپروائزر: admin123",
+    navTitle:"HRCO — اوور ٹائم", btnLogout:"لاگ آؤٹ",
+    pLabel:"موجودہ مدت", btnPrev:"◀ پچھلا", btnNext:"اگلا ▶",
+    ws1l:"کل گھنٹے", ws1s:"اس مدت میں", ws2l:"منظور شدہ", ws2s:"منظور",
+    ws3l:"کھانے کے دن", ws3s:"اس مدت میں",
+    addTitle:"اوور ٹائم اندراج",
+    lDate:"تاریخ (آج خودکار)", todayBadge:"آج",
+    lHours:"گھنٹے", hoursPH:"مثلاً: 3",
+    lProject:"پروجیکٹ", projectPH:"مثلاً: ریاض پروجیکٹ",
+    lCity:"شہر", cityPH:"شہر منتخب کریں",
+    cities:{"Riyadh":"ریاض","Jeddah":"جدہ","Dammam":"دمام","Makkah":"مکہ مکرمہ","Madinah":"مدینہ منورہ","Tabuk":"تبوک","Abha":"ابہا","Other":"دیگر"},
+    lFood:"کھانے کا الاؤنس",
+    btnAddE:"اندراج کریں", wTableT:"اوور ٹائم ریکارڈز",
+    emptyMsg:"کوئی ریکارڈ نہیں۔",
+    sTab1:"نگرانی اور منظوری", sTab2:"رپورٹس", sTab3:"ملازمین انتظام",
+    ss1l:"کل گھنٹے", ss1s:"تمام ملازمین", ss2l:"زیر التوا", ss2s:"ریکارڈ",
+    ss3l:"منظور شدہ", ss3s:"ریکارڈ",
+    empHeader:"ملازمین", addWTitle:"نیا ملازم",
+    lNewName:"پورا نام", newNamePH:"مثلاً: محمد",
+    lNewRole:"عہدہ", lNewPin:"پن (4 ہندسے)", newPinPH:"1234",
+    btnAW:"شامل", wListTitle:"ملازمین کی فہرست",
+    rW:"مزدور", rT:"ٹیکنیشن", rS:"سپروائزر",
+    eModalT:"ریکارڈ ترمیم",
+    eLDate:"تاریخ", eLHours:"گھنٹے", eLProj:"پروجیکٹ", eLCity:"شہر",
+    eLStatus:"حیثیت", eLFood:"کھانا",
+    eCancelB:"منسوخ", eConfirmB:"محفوظ",
+    dModalT:"ملازم حذف", dCancelB:"منسوخ", dConfirmB:"حذف",
+    stPending:"زیر التوا", stApproved:"منظور", stRejected:"مسترد", stPShort:"انتظار",
+    thDate:"تاریخ", thProject:"پروجیکٹ", thCity:"شہر", thHours:"گھنٹے",
+    thFood:"کھانا", thStatus:"حیثیت", thWorker:"ملازم", thRole:"عہدہ",
+    thActions:"اقدامات", thName:"نام", thPin:"پن", thAction:"اقدام",
+    btnEdit:"ترمیم", btnApprove:"منظور", btnReject:"مسترد", btnDelete:"حذف",
+    totalLbl:"کل", hoursU:"گھنٹے", foodU:"کھانے کے دن", workU:"کام کے دن",
+    allEmp:"تمام ملازمین", recOf:"ریکارڈ", pendOf:"انتظار",
+    toastAdded:"ریکارڈ شامل ✓", toastAppr:"منظور ✓",
+    toastRej:"مسترد", toastSaved:"محفوظ ✓",
+    toastWAdded:"ملازم شامل ✓", toastWDel:"ملازم حذف",
+    toastExp:"ایکسپورٹ ✓", toastNoData:"ڈیٹا نہیں",
+    errFill:"تمام خانے پُر کریں", errHours:"گھنٹے 0.5–16",
+    errSelName:"نام منتخب کریں", errPin:"پن غلط",
+    errPass:"پاس ورڈ غلط", errPinFmt:"پن 4 ہندسے",
+    errWName:"نام درج کریں", errSelWorkers:"ایک ملازم منتخب کریں",
+    delMsg1:"حذف کریں؟", delMsg2:"تمام ریکارڈز حذف ہوں گے۔",
+    rTitle:"رپورٹ ترتیب", rTypeLabel:"رپورٹ کی قسم",
+    rdaily:"روزانہ", rweekly:"ہفتہ وار", rmonthly:"ماہانہ", ryearly:"سالانہ", rcustom:"مخصوص",
+    rDateLabel:"تاریخ", rFromLabel:"شروع", rToLabel:"اختتام",
+    rMonthLabel:"مہینہ", rYearLabel:"سال",
+    rWFilter:"ملازمین منتخب کریں",
+    btnSelAll:"سب منتخب", btnSelNone:"سب ہٹائیں", btnGenRep:"رپورٹ بنائیں",
+    repDailyTitle:"روزانہ رپورٹ", repWeeklyTitle:"ہفتہ وار رپورٹ",
+    repMonthlyTitle:"ماہانہ رپورٹ", repYearlyTitle:"سالانہ رپورٹ",
+    repCustomTitle:"مخصوص رپورٹ",
+    noRepMsg:"رپورٹ کی قسم منتخب کریں پھر رپورٹ بنائیں",
+    wtab1:"میرے ریکارڈز", wtab2:"میری رپورٹس",
+    companyName:"HRCO ریفریجریشن فیکٹری",
+    generatedOn:"تاریخ اجرا",
+    months:["جنوری","فروری","مارچ","اپریل","مئی","جون","جولائی","اگست","ستمبر","اکتوبر","نومبر","دسمبر"],
+    days:["اتوار","پیر","منگل","بدھ","جمعرات","جمعہ","ہفتہ"],
+    pFmt:(s,e,m)=>"26 "+m[s.getMonth()]+" – 25 "+m[e.getMonth()]+" "+e.getFullYear(),
+  }
+};
+
+// ================================================================
+// STATE
+// ================================================================
+let lang=localStorage.getItem("ot_lang")||"ar";
+let workers=JSON.parse(localStorage.getItem("ot_workers")||"null")||{
+  ahmed:{name:"أحمد محمد",role:"worker",pin:"1234"},
+  khalid:{name:"خالد العتيبي",role:"technician",pin:"1234"},
+  faisal:{name:"فيصل الشمري",role:"technician",pin:"1234"},
+  omar:{name:"عمر السعيد",role:"worker",pin:"1234"},
+  saad:{name:"سعد القحطاني",role:"supervisor",pin:"1234"},
+};
+let entries=JSON.parse(localStorage.getItem("ot_entries")||"{}");
+let currentUser=null,currentRole=null,loginType="worker";
+let periodOffset=0,filterWorker=null,editingE=null,delWorkerKey=null;
+let reportType="daily",reportData=[],reportMeta={};
+
+function t(k){return TR[lang][k]||TR.ar[k]||k;}
+function save(){localStorage.setItem("ot_workers",JSON.stringify(workers));localStorage.setItem("ot_entries",JSON.stringify(entries));localStorage.setItem("ot_lang",lang);}
+
+// ================================================================
+// HELPERS
+// ================================================================
+function roleLabel(r){return {worker:t("rW"),technician:t("rT"),supervisor:t("rS")}[r]||r;}
+function roleClass(r){return {worker:"rl-w",technician:"rl-t",supervisor:"rl-s"}[r]||"rl-w";}
+function roleBadgeClass(r){return {worker:"nb-w",technician:"nb-t",supervisor:"nb-s"}[r]||"nb-w";}
+function stLabel(s){return {pending:t("stPending"),approved:t("stApproved"),rejected:t("stRejected")}[s]||s;}
+function stShort(s){return {pending:t("stPShort"),approved:t("stApproved"),rejected:t("stRejected")}[s]||s;}
+function stClass(s){return {pending:"st-p",approved:"st-a",rejected:"st-r"}[s]||"st-p";}
+function getTodayStr(){const n=new Date();return n.getFullYear()+"/"+String(n.getMonth()+1).padStart(2,"0")+"/"+String(n.getDate()).padStart(2,"0");}
+function getTodayISO(){const n=new Date();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0");}
+function getTodayDisplay(){const n=new Date();return t("days")[n.getDay()]+" "+n.getDate()+" "+t("months")[n.getMonth()]+" "+n.getFullYear();}
+function isoToDisplay(iso){const p=iso.split("-");return p[2]+"/"+p[1]+"/"+p[0];}
+function getPeriod(offset){
+  const n=new Date();
+  const s=new Date(n.getFullYear(),n.getMonth()-1+offset,26);
+  const e=new Date(n.getFullYear(),n.getMonth()+offset,25);
+  return{label:TR[lang].pFmt(s,e,t("months")),key:s.getFullYear()+"-"+s.getMonth()};
+}
+function getEnt(wk,pk){if(!entries[wk])entries[wk]={};if(!entries[wk][pk])entries[wk][pk]=[];return entries[wk][pk];}
+function initials(name){const p=name.trim().split(" ");return p.length>=2?p[0][0]+p[1][0]:p[0].slice(0,2);}
+function dateStrToObj(ds){const p=ds.split("/");return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
+function buildCitySel(id){
+  const s=document.getElementById(id);if(!s)return;
+  const prev=cityKey(s.value||""); // normalize any old Arabic value to English key
+  s.innerHTML="<option value=''>"+t("cityPH")+"</option>";
+  const cities=t("cities"); // now an object {key: label}
+  Object.entries(cities).forEach(([key,label])=>{
+    const o=document.createElement("option");
+    o.value=key; // always store English key
+    o.textContent=label; // display in current language
+    s.appendChild(o);
+  });
+  if(prev)s.value=prev;
+}
+// Map old Arabic/Urdu stored values → English key (for backward compat)
+const CITY_MIGRATION = {
+  "الرياض":"Riyadh","جدة":"Jeddah","الدمام":"Dammam",
+  "مكة المكرمة":"Makkah","المدينة المنورة":"Madinah",
+  "تبوك":"Tabuk","أبها":"Abha","أخرى":"Other",
+  "ریاض":"Riyadh","جدہ":"Jeddah","دمام":"Dammam",
+  "مکہ مکرمہ":"Makkah","مدینہ منورہ":"Madinah",
+  "تبوک":"Tabuk","ابہا":"Abha","دیگر":"Other",
+};
+// Normalize a stored city value to English key
+function cityKey(val){return CITY_MIGRATION[val]||val;}
+// Translate an English key to current language label
+function cityLabel(val){
+  if(!val)return "";
+  const key=cityKey(val); // normalize old values
+  const cities=t("cities");
+  return cities[key]||val;
+}
+function buildWorkerSel(){
+  const s=document.getElementById("workerSelect");
+  s.innerHTML="<option value=''>-- "+t("lSelectW")+" --</option>";
+  Object.keys(workers).forEach(k=>{const o=document.createElement("option");o.value=k;o.textContent=workers[k].name+" ("+roleLabel(workers[k].role)+")";s.appendChild(o);});
+}
+function refreshPeriod(){
+  const p=getPeriod(periodOffset);
+  const wp=document.getElementById("workerPeriod"),sp=document.getElementById("supPeriod");
+  if(wp)wp.textContent=p.label;if(sp)sp.textContent=p.label;
+}
+
+// ================================================================
+// LANGUAGE
+// ================================================================
+function setLang(l){
+  lang=l;save();
+  document.body.className="lang-"+l;
+  document.documentElement.lang=l;
+  document.documentElement.dir=TR[l].dir;
+  ["ar","en","ur"].forEach(x=>document.getElementById("lb-"+x).classList.toggle("active",x===l));
+  applyTR();buildWorkerSel();buildCitySel("entryCity");buildCitySel("editCity");
+  refreshPeriod();
+  if(currentRole==="worker")renderWT();
+  else if(currentRole==="supervisor"){renderSO();renderMW();buildReportWorkers();updateReportDateUI();}
+}
+
+function applyTR(){
+  const map={
+    llabel:"langLabel",lTitle:"lTitle",lSub:"lSub",tabW:"tabW",tabS:"tabS",
+    lSelectW:"lSelectW",lSPass:"lSPass",lPin:"lPin",btnLogin:"btnLogin",lHint:"lHint",
+    navTitle:"navTitle",btnLogout:"btnLogout",
+    wPLabel:"pLabel",sPLabel:"pLabel",
+    btnPW:"btnPrev",btnNW:"btnNext",btnPS:"btnPrev",btnNS:"btnNext",
+    ws1l:"ws1l",ws1s:"ws1s",ws2l:"ws2l",ws2s:"ws2s",ws3l:"ws3l",ws3s:"ws3s",
+    addTitle:"addTitle",lDate:"lDate",todayBadge:"todayBadge",
+    lHours:"lHours",lProject:"lProject",lCity:"lCity",lFood:"lFood",
+    btnAddE:"btnAddE",wTableT:"wTableT",emptyW:"emptyMsg",
+    sTab1:"sTab1",sTab2:"sTab2",sTab3:"sTab3",
+    ss1l:"ss1l",ss1s:"ss1s",ss2l:"ss2l",ss2s:"ss2s",ss3l:"ss3l",ss3s:"ss3s",
+    empHeader:"empHeader",addWTitle:"addWTitle",
+    lNewName:"lNewName",lNewRole:"lNewRole",lNewPin:"lNewPin",
+    btnAW:"btnAW",wListTitle:"wListTitle",
+    rW:"rW",rT:"rT",rS:"rS",
+    eModalT:"eModalT",eLDate:"eLDate",eLHours:"eLHours",eLProj:"eLProj",eLCity:"eLCity",
+    eLStatus:"eLStatus",eLFood:"eLFood",eCancelB:"eCancelB",eConfirmB:"eConfirmB",
+    eStP:"stPShort",eStA:"stApproved",eStR:"stRejected",
+    dModalT:"dModalT",dCancelB:"dCancelB",dConfirmB:"dConfirmB",
+    rTitle:"rTitle",rTypeLabel:"rTypeLabel",
+    rdaily:"rdaily",rweekly:"rweekly",rmonthly:"rmonthly",ryearly:"ryearly",rcustom:"rcustom",
+    rWFilter:"rWFilter",btnSelAll:"btnSelAll",btnSelNone:"btnSelNone",btnGenRep:"btnGenRep",
+    noRepMsg:"noRepMsg",wtab1:"wtab1",wtab2:"wtab2",
+  };
+  Object.entries(map).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=t(key)||"";});
+  const ph={workerPass:"wPassPH",supervisorPass:"sPassPH",entryHours:"hoursPH",entryProject:"projectPH",newWName:"newNamePH",newWPin:"newPinPH"};
+  Object.entries(ph).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.placeholder=t(key);});
+  document.getElementById("todayTxt").textContent=getTodayDisplay();
+  refreshPeriod();
+}
+
+// ================================================================
+// LOGIN
+// ================================================================
+function setLoginType(type){
+  loginType=type;
+  document.querySelectorAll(".login-tab").forEach((el,i)=>el.classList.toggle("active",(i===0&&type==="worker")||(i===1&&type==="supervisor")));
+  document.getElementById("wSelectGroup").style.display=type==="worker"?"":"none";
+  document.getElementById("wPinGroup").style.display=type==="worker"?"":"none";
+  document.getElementById("sPassGroup").style.display=type==="supervisor"?"":"none";
+}
+function doLogin(){
+  if(loginType==="worker"){
+    const w=document.getElementById("workerSelect").value;
+    const p=document.getElementById("workerPass").value;
+    if(!w)return toast(t("errSelName"));
+    if(p!==workers[w].pin)return toast(t("errPin"));
+    currentUser=w;currentRole="worker";
+    document.getElementById("userName").textContent=workers[w].name;
+    document.getElementById("userBadge").textContent=roleLabel(workers[w].role);
+    document.getElementById("userBadge").className="nav-badge "+roleBadgeClass(workers[w].role);
+    showApp("worker");
+  }else{
+    if(document.getElementById("supervisorPass").value!=="admin123")return toast(t("errPass"));
+    currentUser="supervisor";currentRole="supervisor";
+    document.getElementById("userName").textContent=lang==="en"?"Supervisor":lang==="ur"?"سپروائزر":"المشرف العام";
+    document.getElementById("userBadge").textContent=roleLabel("supervisor");
+    document.getElementById("userBadge").className="nav-badge nb-s";
+    showApp("supervisor");
+  }
+}
+function showApp(role){
+  document.getElementById("loginScreen").style.display="none";
+  document.getElementById("mainApp").style.display="block";
+  document.getElementById("workerPage").className=role==="worker"?"page active":"page";
+  document.getElementById("supervisorPage").className=role==="supervisor"?"page active":"page";
+  periodOffset=0;filterWorker=null;refreshPeriod();
+  if(role==="worker")renderWT();
+  else{renderSO();renderMW();buildReportWorkers();updateReportDateUI();}
+}
+function logout(){
+  currentUser=null;currentRole=null;periodOffset=0;filterWorker=null;
+  document.getElementById("loginScreen").style.display="flex";
+  document.getElementById("mainApp").style.display="none";
+  ["workerSelect","workerPass","supervisorPass"].forEach(id=>document.getElementById(id).value="");
+}
+function changePeriod(dir){periodOffset+=dir;refreshPeriod();if(currentRole==="worker")renderWT();else renderSO();}
+function showWorkerTab(tab){
+  ["wtab1","wtab2"].forEach((id,i)=>document.getElementById(id).classList.toggle("active",(i===0&&tab==="entries")||(i===1&&tab==="myreports")));
+  document.getElementById("wEntries").className="tab-section"+(tab==="entries"?" active":"");
+  document.getElementById("wMyReports").className="tab-section"+(tab==="myreports"?" active":"");
+  if(tab==="myreports")buildMyReports();
+}
+function showSupTab(tab){
+  ["sTab1","sTab2","sTab3"].forEach((id,i)=>document.getElementById(id).classList.toggle("active",(i===0&&tab==="overview")||(i===1&&tab==="reports")||(i===2&&tab==="manage")));
+  document.getElementById("supOverview").className="tab-section"+(tab==="overview"?" active":"");
+  document.getElementById("supReports").className="tab-section"+(tab==="reports"?" active":"");
+  document.getElementById("supManage").className="tab-section"+(tab==="manage"?" active":"");
+  if(tab==="manage")renderMW();
+  if(tab==="reports"){buildReportWorkers();updateReportDateUI();}
+}
+
+// ================================================================
+// WORKER TABLE
+// ================================================================
+function addEntry(){
+  const h=parseFloat(document.getElementById("entryHours").value);
+  const pr=document.getElementById("entryProject").value.trim();
+  const ci=document.getElementById("entryCity").value;
+  const fo=document.getElementById("entryFood").checked;
+  if(!pr||!ci)return toast(t("errFill"));
+  if(isNaN(h)||h<=0||h>16)return toast(t("errHours"));
+  const p=getPeriod(periodOffset);
+  getEnt(currentUser,p.key).push({date:getTodayStr(),hours:h,project:pr,city:ci,food:fo,status:"pending",id:Date.now()});
+  save();
+  document.getElementById("entryHours").value="";document.getElementById("entryProject").value="";
+  document.getElementById("entryCity").value="";document.getElementById("entryFood").checked=false;
+  renderWT();toast(t("toastAdded"));
+}
+function renderWT(){
+  const p=getPeriod(periodOffset),list=getEnt(currentUser,p.key);
+  document.getElementById("wTotalH").textContent=list.reduce((s,e)=>s+e.hours,0);
+  document.getElementById("wApprH").textContent=list.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
+  document.getElementById("wFoodD").textContent=list.filter(e=>e.food).length;
+  const body=document.getElementById("wTableBody");
+  if(!list.length){body.innerHTML="<div class='empty-state'><div class='empty-icon'>📋</div>"+t("emptyMsg")+"</div>";return;}
+  const totalH=list.reduce((s,e)=>s+e.hours,0),foodD=list.filter(e=>e.food).length;
+  body.innerHTML=buildTable(
+    [t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")],
+    list.map(e=>[e.date,e.project,cityLabel(e.city),e.hours,
+      e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
+      "<span class='badge "+stClass(e.status)+"'>"+stLabel(e.status)+"</span>"]),
+    [t("totalLbl"),"","",
+      "<span class='tp tp-b'>"+totalH+" "+t("hoursU")+"</span>",
+      "<span class='tp tp-a'>"+foodD+" "+t("foodU")+"</span>",
+      "<span class='tp tp-g'>"+list.length+" "+t("workU")+"</span>"]
+  );
+}
+
+// ================================================================
+// SUPERVISOR OVERVIEW
+// ================================================================
+function renderSO(){
+  const p=getPeriod(periodOffset);let all=[];
+  Object.keys(workers).forEach(wk=>getEnt(wk,p.key).forEach(e=>all.push({...e,wk,wName:workers[wk].name,wRole:workers[wk].role})));
+  document.getElementById("sTotH").textContent=all.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
+  document.getElementById("sPendC").textContent=all.filter(e=>e.status==="pending").length;
+  document.getElementById("sApprC").textContent=all.filter(e=>e.status==="approved").length;
+  document.getElementById("workersGrid").innerHTML=Object.keys(workers).map(wk=>{
+    const list=getEnt(wk,p.key),hrs=list.reduce((s,e)=>s+e.hours,0),pend=list.filter(e=>e.status==="pending").length,sel=filterWorker===wk;
+    return`<div class="worker-card ${sel?"selected":""}" onclick="setFilter('${wk}')">
+      <div class="worker-avatar">${initials(workers[wk].name)}</div>
+      <div class="worker-name">${workers[wk].name}</div>
+      <div style="margin-top:4px;"><span class="badge ${roleClass(workers[wk].role)}" style="font-size:10px;">${roleLabel(workers[wk].role)}</span></div>
+      <div class="worker-hours">${hrs} ${t("hoursU")}</div>
+      ${pend?`<span class="worker-pending">${pend} ${t("pendOf")}</span>`:""}
+    </div>`;
+  }).join("")+`<div class="worker-card ${!filterWorker?"selected":""}" onclick="setFilter(null)" style="display:flex;align-items:center;gap:10px;padding:0.875rem;">
+    <div style="font-size:26px;">👥</div><div><div class="worker-name" style="font-size:12px;">${t("allEmp")}</div><div class="worker-hours">${all.length} ${t("recOf")}</div></div>
+  </div>`;
+  const filtered=filterWorker?all.filter(e=>e.wk===filterWorker):all;
+  document.getElementById("sTableT").textContent=filterWorker?workers[filterWorker].name:t("allEmp");
+  const body=document.getElementById("sTableBody");
+  if(!filtered.length){body.innerHTML="<div class='empty-state'><div class='empty-icon'>📋</div>"+t("emptyMsg")+"</div>";return;}
+  const approvedH=filtered.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
+  const foodD=filtered.filter(e=>e.food).length;
+  body.innerHTML=buildTable(
+    [t("thWorker"),t("thRole"),t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus"),t("thActions")],
+    filtered.map(e=>[e.wName,
+      "<span class='badge "+roleClass(e.wRole)+"'>"+roleLabel(e.wRole)+"</span>",
+      e.date,e.project,cityLabel(e.city),e.hours,
+      e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
+      "<span class='badge "+stClass(e.status)+"'>"+stShort(e.status)+"</span>",
+      `<div class="action-btns no-print">
+        <button class="bsa" onclick="openEdit('${e.wk}','${e.id}')">${t("btnEdit")}</button>
+        ${e.status!=="approved"?`<button class="bsg" onclick="chStatus('${e.wk}','${e.id}','approved')">${t("btnApprove")}</button>`:""}
+        ${e.status!=="rejected"?`<button class="bsr" onclick="chStatus('${e.wk}','${e.id}','rejected')">${t("btnReject")}</button>`:""}
+      </div>`
+    ]),
+    [t("totalLbl"),"","","","",
+      "<span class='tp tp-b'>"+approvedH+" "+t("hoursU")+"</span>",
+      "<span class='tp tp-a'>"+foodD+" "+t("foodU")+"</span>",
+      "<span class='tp tp-g'>"+filtered.length+" "+t("workU")+"</span>",""]
+  );
+}
+function setFilter(wk){filterWorker=wk;renderSO();}
+function chStatus(wk,id,status){
+  const p=getPeriod(periodOffset),list=getEnt(wk,p.key),e=list.find(e=>String(e.id)===String(id));
+  if(e){e.status=status;save();renderSO();toast(status==="approved"?t("toastAppr"):t("toastRej"));}
+}
+
+// ================================================================
+// SHARED TABLE BUILDER
+// ================================================================
+function buildTable(headers,rows,totals){
+  const h=headers.map(h=>"<th>"+h+"</th>").join("");
+  const r=rows.map(row=>"<tr>"+row.map(c=>"<td>"+c+"</td>").join("")+"</tr>").join("");
+  const tot="<tr class='totals-row'>"+totals.map(c=>"<td>"+c+"</td>").join("")+"</tr>";
+  return`<div class="tbl-wrap"><table><thead><tr>${h}</tr></thead><tbody>${r}${tot}</tbody></table></div>`;
+}
+
+// ================================================================
+// EDIT MODAL
+// ================================================================
+function openEdit(wk,id){
+  const p=getPeriod(periodOffset),list=getEnt(wk,p.key),e=list.find(e=>String(e.id)===String(id));
+  if(!e)return;editingE={wk,id};buildCitySel("editCity");
+  document.getElementById("editDate").value=e.date.replace(/\//g,"-");
+  document.getElementById("editHours").value=e.hours;
+  document.getElementById("editProject").value=e.project;
+  document.getElementById("editCity").value=cityKey(e.city); // normalize old values
+  document.getElementById("editStatus").value=e.status;
+  document.getElementById("editFood").checked=e.food;
+  document.getElementById("editModal").style.display="flex";
+}
+function closeEditModal(){document.getElementById("editModal").style.display="none";editingE=null;}
+function confirmEdit(){
+  if(!editingE)return;
+  const nd=document.getElementById("editDate").value,nh=parseFloat(document.getElementById("editHours").value);
+  const np=document.getElementById("editProject").value.trim(),nc=document.getElementById("editCity").value;
+  const ns=document.getElementById("editStatus").value,nf=document.getElementById("editFood").checked;
+  if(!nd||isNaN(nh)||!np||!nc)return toast(t("errFill"));
+  if(nh<=0||nh>16)return toast(t("errHours"));
+  const p=getPeriod(periodOffset),list=getEnt(editingE.wk,p.key),e=list.find(e=>String(e.id)===String(editingE.id));
+  if(e){e.date=nd.replace(/-/g,"/");e.hours=nh;e.project=np;e.city=nc;e.status=ns;e.food=nf;save();closeEditModal();renderSO();toast(t("toastSaved"));}
+}
+
+// ================================================================
+// MANAGE WORKERS
+// ================================================================
+function renderMW(){
+  const keys=Object.keys(workers);
+  document.getElementById("wCount").textContent=keys.length+" "+t("recOf");
+  const body=document.getElementById("wManageTable");
+  if(!keys.length){body.innerHTML="<div class='empty-state'>"+t("emptyMsg")+"</div>";return;}
+  body.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>${t("thName")}</th><th>${t("thRole")}</th><th>${t("thPin")}</th><th>${t("thAction")}</th></tr></thead><tbody>
+  ${keys.map(k=>`<tr>
+    <td><div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:34px;height:34px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#185FA5;flex-shrink:0;">${initials(workers[k].name)}</div>${workers[k].name}
+    </div></td>
+    <td><select onchange="chRole('${k}',this.value)" style="width:auto;padding:5px 10px;font-size:13px;">
+      <option value="worker" ${workers[k].role==="worker"?"selected":""}>${t("rW")}</option>
+      <option value="technician" ${workers[k].role==="technician"?"selected":""}>${t("rT")}</option>
+      <option value="supervisor" ${workers[k].role==="supervisor"?"selected":""}>${t("rS")}</option>
+    </select></td>
+    <td style="font-family:monospace;letter-spacing:3px;">${workers[k].pin}</td>
+    <td><button class="bsr" onclick="openDel('${k}')">${t("btnDelete")}</button></td>
+  </tr>`).join("")}</tbody></table></div>`;
+}
+function addWorker(){
+  const name=document.getElementById("newWName").value.trim();
+  const role=document.getElementById("newWRole").value;
+  const pin=document.getElementById("newWPin").value.trim();
+  if(!name)return toast(t("errWName"));
+  if(pin.length<4||!/^\d+$/.test(pin))return toast(t("errPinFmt"));
+  workers["w_"+Date.now()]={name,role,pin};save();
+  document.getElementById("newWName").value="";document.getElementById("newWPin").value="";
+  buildWorkerSel();renderMW();buildReportWorkers();toast(t("toastWAdded"));
+}
+function chRole(k,r){workers[k].role=r;save();buildWorkerSel();}
+function openDel(k){
+  delWorkerKey=k;
+  document.getElementById("dConfirmTxt").innerHTML=t("delMsg1")+" <strong>"+workers[k].name+"</strong>? "+t("delMsg2");
+  document.getElementById("deleteModal").style.display="flex";
+}
+function closeDelModal(){document.getElementById("deleteModal").style.display="none";delWorkerKey=null;}
+function confirmDel(){
+  if(!delWorkerKey)return;
+  const name=workers[delWorkerKey].name;
+  delete workers[delWorkerKey];delete entries[delWorkerKey];
+  save();closeDelModal();buildWorkerSel();renderMW();renderSO();buildReportWorkers();
+  toast(t("toastWDel")+": "+name);
+}
+
+// ================================================================
+// REPORTS ENGINE
+// ================================================================
+function setRType(type){
+  reportType=type;
+  document.querySelectorAll(".rtype-btn").forEach(b=>b.classList.remove("active"));
+  const el=document.getElementById("r"+type);if(el)el.classList.add("active");
+  updateReportDateUI();
+}
+function updateReportDateUI(){
+  const div=document.getElementById("rDateFilters");if(!div)return;
+  const now=new Date(),yyyy=now.getFullYear(),mm=now.getMonth()+1,isoToday=getTodayISO();
+  if(reportType==="daily"){
+    div.innerHTML=`<div class="form-row" style="max-width:300px;"><div class="field-group" style="margin:0;"><label class="field-label">${t("rDateLabel")}</label><input type="date" id="rDate" value="${isoToday}" max="${isoToday}"/></div></div>`;
+  }else if(reportType==="weekly"||reportType==="custom"){
+    div.innerHTML=`<div class="form-row" style="max-width:500px;">
+      <div class="field-group" style="margin:0;"><label class="field-label">${t("rFromLabel")}</label><input type="date" id="rFrom" value="${isoToday}" max="${isoToday}"/></div>
+      <div class="field-group" style="margin:0;"><label class="field-label">${t("rToLabel")}</label><input type="date" id="rTo" value="${isoToday}" max="${isoToday}"/></div>
+    </div>`;
+  }else if(reportType==="monthly"){
+    let mOpts=t("months").map((m,i)=>`<option value="${i+1}" ${(i+1)===mm?"selected":""}>${m}</option>`).join("");
+    let yOpts="";for(let y=yyyy;y>=yyyy-5;y--)yOpts+=`<option value="${y}" ${y===yyyy?"selected":""}>${y}</option>`;
+    div.innerHTML=`<div class="form-row" style="max-width:500px;">
+      <div class="field-group" style="margin:0;"><label class="field-label">${t("rMonthLabel")}</label><select id="rMonth">${mOpts}</select></div>
+      <div class="field-group" style="margin:0;"><label class="field-label">${t("rYearLabel")}</label><select id="rYear">${yOpts}</select></div>
+    </div>`;
+  }else{
+    let yOpts="";for(let y=yyyy;y>=yyyy-10;y--)yOpts+=`<option value="${y}" ${y===yyyy?"selected":""}>${y}</option>`;
+    div.innerHTML=`<div class="form-row" style="max-width:260px;"><div class="field-group" style="margin:0;"><label class="field-label">${t("rYearLabel")}</label><select id="rYear">${yOpts}</select></div></div>`;
+  }
+}
+function buildReportWorkers(){
+  const div=document.getElementById("rWorkersCheck");if(!div)return;
+  div.innerHTML=Object.keys(workers).map(k=>`
+    <div class="wcheck checked" id="wc_${k}" onclick="toggleWCheck('${k}')">
+      <input type="checkbox" id="wcb_${k}" checked/>
+      <label for="wcb_${k}" style="pointer-events:none;">${workers[k].name} <span style="font-size:10px;color:#888;">(${roleLabel(workers[k].role)})</span></label>
+    </div>`).join("");
+}
+function toggleWCheck(k){
+  const cb=document.getElementById("wcb_"+k);
+  if(cb){cb.checked=!cb.checked;document.getElementById("wc_"+k).classList.toggle("checked",cb.checked);}
+}
+function selectAllWorkers(val){
+  Object.keys(workers).forEach(k=>{
+    const cb=document.getElementById("wcb_"+k);
+    if(cb){cb.checked=val;document.getElementById("wc_"+k).classList.toggle("checked",val);}
+  });
+}
+function getDateRange(){
+  const now=new Date(),yyyy=now.getFullYear(),mm=now.getMonth()+1,isoToday=getTodayISO();
+  if(reportType==="daily"){
+    const d=document.getElementById("rDate")?.value||isoToday;
+    const fd=new Date(d);fd.setHours(0,0,0,0);const td=new Date(d);td.setHours(23,59,59,999);
+    return{from:fd,to:td,label:isoToDisplay(d)};
+  }else if(reportType==="weekly"||reportType==="custom"){
+    const f=document.getElementById("rFrom")?.value||isoToday;const t2=document.getElementById("rTo")?.value||isoToday;
+    const fd=new Date(f);fd.setHours(0,0,0,0);const td=new Date(t2);td.setHours(23,59,59,999);
+    return{from:fd,to:td,label:isoToDisplay(f)+" – "+isoToDisplay(t2)};
+  }else if(reportType==="monthly"){
+    const m=parseInt(document.getElementById("rMonth")?.value||mm);const y=parseInt(document.getElementById("rYear")?.value||yyyy);
+    const fd=new Date(y,m-1,1);const td=new Date(y,m,0);td.setHours(23,59,59,999);
+    return{from:fd,to:td,label:t("months")[m-1]+" "+y};
+  }else{
+    const y=parseInt(document.getElementById("rYear")?.value||yyyy);
+    const fd=new Date(y,0,1);const td=new Date(y,11,31);td.setHours(23,59,59,999);
+    return{from:fd,to:td,label:""+y};
+  }
+}
+function generateReport(){
+  const selWks=Object.keys(workers).filter(k=>document.getElementById("wcb_"+k)?.checked);
+  if(!selWks.length)return toast(t("errSelWorkers"));
+  const range=getDateRange();
+  reportData=[];
+  selWks.forEach(wk=>{
+    const allEnt=[];
+    if(entries[wk])Object.values(entries[wk]).forEach(list=>allEnt.push(...list));
+    allEnt.forEach(e=>{const d=dateStrToObj(e.date);if(d>=range.from&&d<=range.to)reportData.push({...e,wk,wName:workers[wk].name,wRole:workers[wk].role});});
+  });
+  reportData.sort((a,b)=>a.date.localeCompare(b.date));
+  const rtLabels={daily:t("repDailyTitle"),weekly:t("repWeeklyTitle"),monthly:t("repMonthlyTitle"),yearly:t("repYearlyTitle"),custom:t("repCustomTitle")};
+  reportMeta={title:rtLabels[reportType],range:range.label,workers:selWks.map(k=>workers[k].name).join(", ")};
+
+  // Update PDF header for report
+  ["rPdfLogo"].forEach(id=>{const el=document.getElementById(id);if(el)el.src=LOGO_SRC;});
+  const rPdfT=document.getElementById("rPdfTitle");if(rPdfT)rPdfT.textContent=reportMeta.title+" | "+reportMeta.range;
+  const rPdfD=document.getElementById("rPdfDate");if(rPdfD)rPdfD.textContent=t("generatedOn")+": "+getTodayStr();
+  const rPdfR=document.getElementById("rPdfRight");if(rPdfR)rPdfR.textContent=reportMeta.workers;
+
+  document.getElementById("repTitle").textContent=reportMeta.title;
+  document.getElementById("repSub").textContent=reportMeta.range+" | "+reportMeta.workers;
+  const totalH=reportData.reduce((s,e)=>s+e.hours,0),foodD=reportData.filter(e=>e.food).length;
+  document.getElementById("repPills").innerHTML=
+    `<div class="r-pill">${totalH} ${t("hoursU")}</div>
+     <div class="r-pill">${reportData.length} ${t("workU")}</div>
+     <div class="r-pill">${foodD} ${t("foodU")}</div>`;
+
+  if(!reportData.length){
+    document.getElementById("reportResult").style.display="none";
+    document.getElementById("noReport").style.display="block";
+    document.getElementById("noRepMsg").textContent=lang==="en"?"No records found for selected period.":lang==="ur"?"کوئی ریکارڈ نہیں۔":"لا توجد سجلات للفترة المحددة.";
+    return;
+  }
+  document.getElementById("noReport").style.display="none";
+  document.getElementById("reportResult").style.display="block";
+  document.getElementById("repTableTitle").textContent=reportMeta.title+" – "+reportMeta.range;
+  const body=document.getElementById("repTableBody");
+
+  // Group by worker - each worker gets their own header + table
+  const workerGroups = {};
+  const workerOrder = [];
+  reportData.forEach(e=>{
+    if(!workerGroups[e.wk]){ workerGroups[e.wk]={name:e.wName,role:e.wRole,entries:[]}; workerOrder.push(e.wk); }
+    workerGroups[e.wk].entries.push(e);
+  });
+
+  let html = "";
+  let grandApprH=0, grandFoodD=0, grandDays=0;
+
+  workerOrder.forEach(wk=>{
+    const grp=workerGroups[wk];
+    const approvedH=grp.entries.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
+    const foodD=grp.entries.filter(e=>e.food).length;
+    grandApprH+=approvedH; grandFoodD+=foodD; grandDays+=grp.entries.length;
+
+    html+=`<div class="worker-section-header print-only">
+      <h3>${grp.name}</h3>
+      <p>${roleLabel(grp.role)}</p>
+    </div>`;
+    html+=`<div class="worker-name-screen no-print" style="font-size:14px;font-weight:600;color:#185FA5;padding:8px 12px;background:#E6F1FB;border-radius:8px;margin-bottom:8px;">
+      ${grp.name} — <span class="badge ${roleClass(grp.role)}">${roleLabel(grp.role)}</span>
+    </div>`;
+    html+=buildTable(
+      [t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")],
+      grp.entries.map(e=>[
+        e.date, e.project, cityLabel(e.city), e.hours,
+        e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
+        "<span class='badge "+stClass(e.status)+"'>"+stShort(e.status)+"</span>"
+      ]),
+      [t("totalLbl"),"","",
+        "<span class='tp tp-b'>"+approvedH+" "+t("hoursU")+"</span>",
+        "<span class='tp tp-a'>"+foodD+" "+t("foodU")+"</span>",
+        "<span class='tp tp-g'>"+grp.entries.length+" "+t("workU")+"</span>"
+      ]
+    );
+    html+=`<div style="margin-bottom:20px;"></div>`;
+  });
+
+  // Grand total row if multiple workers
+  if(workerOrder.length>1){
+    html+=`<div style="background:#1a3d6b;color:white;border-radius:8px;padding:10px 16px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+      <strong>${t("totalLbl")} — ${t("allEmp")}</strong>
+      <span class="r-pill" style="background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:12px;">${grandApprH} ${t("hoursU")}</span>
+      <span class="r-pill" style="background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:12px;">${grandFoodD} ${t("foodU")}</span>
+      <span class="r-pill" style="background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:12px;">${grandDays} ${t("workU")}</span>
+    </div>`;
+  }
+  body.innerHTML=html;
+}
+
+// ================================================================
+// MY REPORTS
+// ================================================================
+let myRType="daily";
+function buildMyReports(){
+  const div=document.getElementById("myReportContent");
+  div.innerHTML=`<div class="report-filters">
+    <div style="font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:1rem;">${t("wtab2")}</div>
+    <div style="font-size:12px;color:#888;font-weight:500;margin-bottom:8px;">${t("rTypeLabel")}</div>
+    <div class="report-type-tabs">
+      <button class="rtype-btn active" onclick="setMyRType(this,'daily')">${t("rdaily")}</button>
+      <button class="rtype-btn" onclick="setMyRType(this,'monthly')">${t("rmonthly")}</button>
+      <button class="rtype-btn" onclick="setMyRType(this,'yearly')">${t("ryearly")}</button>
+      <button class="rtype-btn" onclick="setMyRType(this,'custom')">${t("rcustom")}</button>
+    </div>
+    <div id="myRDateFilters" style="margin-top:1rem;"></div>
+    <button class="btn btn-blue" onclick="generateMyReport()" style="margin-top:1rem;">${t("btnGenRep")}</button>
+  </div><div id="myRepResult"></div>`;
+  myRType="daily";updateMyDateUI();
+}
+function setMyRType(btn,type){
+  myRType=type;
+  document.querySelectorAll("#myReportContent .rtype-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");updateMyDateUI();
+}
+function updateMyDateUI(){
+  const div=document.getElementById("myRDateFilters");if(!div)return;
+  const now=new Date(),yyyy=now.getFullYear(),mm=now.getMonth()+1,isoToday=getTodayISO();
+  if(myRType==="daily"){
+    div.innerHTML=`<div class="form-row" style="max-width:300px;"><div class="field-group" style="margin:0;"><label class="field-label">${t("rDateLabel")}</label><input type="date" id="myRDate" value="${isoToday}" max="${isoToday}"/></div></div>`;
+  }else if(myRType==="monthly"){
+    let mOpts=t("months").map((m,i)=>`<option value="${i+1}" ${(i+1)===mm?"selected":""}>${m}</option>`).join("");
+    let yOpts="";for(let y=yyyy;y>=yyyy-5;y--)yOpts+=`<option value="${y}" ${y===yyyy?"selected":""}>${y}</option>`;
+    div.innerHTML=`<div class="form-row" style="max-width:500px;">
+      <div class="field-group" style="margin:0;"><label class="field-label">${t("rMonthLabel")}</label><select id="myRMonth">${mOpts}</select></div>
+      <div class="field-group" style="margin:0;"><label class="field-label">${t("rYearLabel")}</label><select id="myRYear">${yOpts}</select></div>
+    </div>`;
+  }else if(myRType==="yearly"){
+    let yOpts="";for(let y=yyyy;y>=yyyy-10;y--)yOpts+=`<option value="${y}" ${y===yyyy?"selected":""}>${y}</option>`;
+    div.innerHTML=`<div class="form-row" style="max-width:260px;"><div class="field-group" style="margin:0;"><label class="field-label">${t("rYearLabel")}</label><select id="myRYear">${yOpts}</select></div></div>`;
+  }else{
+    div.innerHTML=`<div class="form-row" style="max-width:500px;">
+      <div class="field-group" style="margin:0;"><label class="field-label">${t("rFromLabel")}</label><input type="date" id="myRFrom" value="${isoToday}" max="${isoToday}"/></div>
+      <div class="field-group" style="margin:0;"><label class="field-label">${t("rToLabel")}</label><input type="date" id="myRTo" value="${isoToday}" max="${isoToday}"/></div>
+    </div>`;
+  }
+}
+function generateMyReport(){
+  const now=new Date(),yyyy=now.getFullYear(),mm=now.getMonth()+1,isoToday=getTodayISO();
+  let from,to,rangeLabel;
+  if(myRType==="daily"){const d=document.getElementById("myRDate")?.value||isoToday;from=new Date(d);from.setHours(0,0,0,0);to=new Date(d);to.setHours(23,59,59,999);rangeLabel=isoToDisplay(d);}
+  else if(myRType==="monthly"){
+    const m=parseInt(document.getElementById("myRMonth")?.value||mm),y=parseInt(document.getElementById("myRYear")?.value||yyyy);
+    from=new Date(y,m-1,1);to=new Date(y,m,0);to.setHours(23,59,59,999);rangeLabel=t("months")[m-1]+" "+y;
+  }else if(myRType==="yearly"){
+    const y=parseInt(document.getElementById("myRYear")?.value||yyyy);
+    from=new Date(y,0,1);to=new Date(y,11,31);to.setHours(23,59,59,999);rangeLabel=""+y;
+  }else{
+    const f=document.getElementById("myRFrom")?.value||isoToday,t2=document.getElementById("myRTo")?.value||isoToday;
+    from=new Date(f);from.setHours(0,0,0,0);to=new Date(t2);to.setHours(23,59,59,999);rangeLabel=isoToDisplay(f)+" – "+isoToDisplay(t2);
+  }
+  const allEnt=[];
+  if(entries[currentUser])Object.values(entries[currentUser]).forEach(list=>allEnt.push(...list));
+  const data=allEnt.filter(e=>{const d=dateStrToObj(e.date);return d>=from&&d<=to;}).sort((a,b)=>a.date.localeCompare(b.date));
+  const result=document.getElementById("myRepResult");
+  if(!data.length){result.innerHTML=`<div class="no-results"><div style="font-size:36px;">📊</div><div style="margin-top:12px;">${lang==="en"?"No records found.":lang==="ur"?"کوئی ریکارڈ نہیں۔":"لا توجد سجلات."}</div></div>`;return;}
+  const totalH=data.reduce((s,e)=>s+e.hours,0),foodD=data.filter(e=>e.food).length;
+  const tableHtml=buildTable(
+    [t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")],
+    data.map(e=>[e.date,e.project,cityLabel(e.city),e.hours,
+      e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
+      "<span class='badge "+stClass(e.status)+"'>"+stLabel(e.status)+"</span>"]),
+    [t("totalLbl"),"","",
+      "<span class='tp tp-b'>"+totalH+" "+t("hoursU")+"</span>",
+      "<span class='tp tp-a'>"+foodD+" "+t("foodU")+"</span>",
+      "<span class='tp tp-g'>"+data.length+" "+t("workU")+"</span>"]
+  );
+  // store for print
+  window._myRepData={data,rangeLabel,workerName:workers[currentUser].name,tableHtml,totalH,foodD};
+  result.innerHTML=`
+    <div class="report-result-header no-print">
+      <div><div class="report-result-title">${t("wTableT")}</div><div class="report-result-sub">${rangeLabel} | ${workers[currentUser].name}</div></div>
+      <div class="report-summary-pills"><div class="r-pill">${totalH} ${t("hoursU")}</div><div class="r-pill">${data.length} ${t("workU")}</div><div class="r-pill">${foodD} ${t("foodU")}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">${rangeLabel}</span>
+        <div class="card-actions no-print">
+          <button class="btn-excel" onclick="exportMyRepExcel()">Excel ↓</button>
+          <button class="btn-pdf" onclick="printMyReport()">🖨 PDF</button>
+        </div>
+      </div>
+      <div id="myRepTable">${tableHtml}</div>
+    </div>`;
+}
+
+// ================================================================
+// PDF via Browser Print (preserves Arabic)
+// ================================================================
+function preparePDFHeader(logoIds, titleIds, dateIds, rightIds, titleText, dateText, rightText){
+  // Set logos
+  logoIds.forEach(id=>{const el=document.getElementById(id);if(el){el.src=LOGO_SRC;}});
+  titleIds.forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=titleText;});
+  dateIds.forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=t("generatedOn")+": "+getTodayStr();});
+  rightIds.forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=rightText;});
+}
+
+function printWorkerTable(){
+  const p=getPeriod(periodOffset);
+  preparePDFHeader(
+    ["wPdfLogo"],["wPdfTitle"],["wPdfDate"],["wPdfRight"],
+    t("wTableT")+" — "+p.label,"",
+    workers[currentUser].name+" | "+roleLabel(workers[currentUser].role)
+  );
+  document.getElementById("wPdfCompany").textContent=t("companyName");
+  const header=document.getElementById("wPdfHeader");
+  const body=document.getElementById("wTableBody");
+  let pt=document.getElementById("printTarget");
+  if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
+  pt.innerHTML=header.outerHTML+body.innerHTML;
+  pt.style.display="block";
+  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";},500);},200);
+}
+
+function printSupTable(){
+  const p=getPeriod(periodOffset);
+  preparePDFHeader(
+    ["sPdfLogo"],["sPdfTitle"],["sPdfDate"],["sPdfRight"],
+    t("allEmp")+" — "+p.label,"",
+    filterWorker?workers[filterWorker].name:t("allEmp")
+  );
+  document.getElementById("sPdfCompany").textContent=t("companyName");
+  const header=document.getElementById("sPdfHeader");
+  const body=document.getElementById("sTableBody");
+  let pt=document.getElementById("printTarget");
+  if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
+  pt.innerHTML=header.outerHTML+body.innerHTML;
+  pt.style.display="block";
+  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";},500);},200);
+}
+
+function printReport(){
+  const header=document.getElementById("rPdfHeader");
+  const body=document.getElementById("repTableBody");
+  if(!header||!body)return;
+  document.getElementById("rPdfCompany").textContent=t("companyName");
+
+  // Build isolated print target
+  let pt=document.getElementById("printTarget");
+  if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
+  pt.innerHTML=header.outerHTML+body.innerHTML;
+  pt.style.display="block";
+  // Show worker section headers in print
+  pt.querySelectorAll(".worker-section-header").forEach(el=>el.style.display="block");
+
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{pt.style.display="none";pt.innerHTML="";},500);
+  },200);
+}
+
+function printMyReport(){
+  preparePDFHeader(
+    ["wPdfLogo"],["wPdfTitle"],["wPdfDate"],["wPdfRight"],
+    t("wTableT")+" — "+(window._myRepData?.rangeLabel||""),"",
+    workers[currentUser].name
+  );
+  document.getElementById("wPdfCompany").textContent=t("companyName");
+  const header=document.getElementById("wPdfHeader");
+  const body=document.getElementById("myRepTable");
+  let pt=document.getElementById("printTarget");
+  if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
+  pt.innerHTML=header.outerHTML+(body?body.innerHTML:"");
+  pt.style.display="block";
+  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";},500);},200);
+}
+
+// ================================================================
+// EXCEL EXPORTS
+// ================================================================
+function exportWExcel(){
+  const p=getPeriod(periodOffset),list=getEnt(currentUser,p.key);
+  if(!list.length)return toast(t("toastNoData"));
+  const h=[t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
+  const r=list.map(e=>[e.date,e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stLabel(e.status)]);
+  const th=list.reduce((s,e)=>s+e.hours,0),fd=list.filter(e=>e.food).length;
+  exportXLS([h,...r,[t("totalLbl"),"","",th+" "+t("hoursU"),fd+" "+t("foodU"),list.length+" "+t("workU")]],workers[currentUser].name,workers[currentUser].name+"_"+p.label);
+}
+function exportSExcel(){
+  const p=getPeriod(periodOffset);let all=[];
+  Object.keys(workers).forEach(wk=>getEnt(wk,p.key).forEach(e=>all.push({...e,wk,wName:workers[wk].name,wRole:workers[wk].role})));
+  const filtered=filterWorker?all.filter(e=>e.wk===filterWorker):all;
+  if(!filtered.length)return toast(t("toastNoData"));
+  const h=[t("thWorker"),t("thRole"),t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
+  const r=filtered.map(e=>[e.wName,roleLabel(e.wRole),e.date,e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stShort(e.status)]);
+  const th=filtered.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0),fd=filtered.filter(e=>e.food).length;
+  exportXLS([h,...r,[t("totalLbl"),"","","","",th+" "+t("hoursU"),fd+" "+t("foodU"),filtered.length+" "+t("workU")]],t("allEmp"),"Overtime_"+p.label);
+}
+function exportRepExcel(){
+  if(!reportData.length)return toast(t("toastNoData"));
+  const h=[t("thWorker"),t("thRole"),t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
+  const r=reportData.map(e=>[e.wName,roleLabel(e.wRole),e.date,e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stShort(e.status)]);
+  const th=reportData.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0),fd=reportData.filter(e=>e.food).length;
+  exportXLS([h,...r,[t("totalLbl"),"","","","",th+" "+t("hoursU"),fd+" "+t("foodU"),reportData.length+" "+t("workU")]],reportMeta.title,"Report_"+reportMeta.range);
+}
+function exportMyRepExcel(){
+  const d=window._myRepData;if(!d||!d.data.length)return toast(t("toastNoData"));
+  const h=[t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
+  const r=d.data.map(e=>[e.date,e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stLabel(e.status)]);
+  exportXLS([h,...r,[t("totalLbl"),"","",d.totalH+" "+t("hoursU"),d.foodD+" "+t("foodU"),d.data.length+" "+t("workU")]],d.workerName,d.workerName+"_"+d.rangeLabel);
+}
+function exportXLS(data,sheetName,fileName){
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb,ws,sheetName.slice(0,31));
+  XLSX.writeFile(wb,fileName+".xlsx");
+  toast(t("toastExp"));
+}
+
+// TOAST
+function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2500);}
+
+// INIT
+setLang(lang);buildWorkerSel();buildCitySel("entryCity");buildCitySel("editCity");
+</script>
+</body>
+</html>
