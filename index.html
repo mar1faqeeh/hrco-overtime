@@ -729,23 +729,172 @@ const TR = {
 };
 
 // ================================================================
+// SUPABASE CONFIGURATION
+// ================================================================
+const SUPABASE_URL = "https://yxrncubqcbzwsxjhwveb.supabase.co/rest/v1/";       // ← ضع رابط مشروعك هنا
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4cm5jdWJxY2J6d3N4amh3dmViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NzcsImV4cCI6MjA5MzkxNzc3N30.mz7rabNMWXD7-jzh2XHabJppbRvpzxaJkZqng2nVAaQ";  // ← ضع المفتاح العام هنا
+
+const sb = (() => {
+  const headers = {
+    "Content-Type": "application/json",
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Prefer": "return=representation"
+  };
+  const api = (path, opts={}) =>
+    fetch(SUPABASE_URL + "/rest/v1/" + path, { headers, ...opts })
+      .then(r => r.json().then(d => ({ok: r.ok, status: r.status, data: d})));
+
+  return {
+    from: (table) => ({
+      select: (cols="*") => api(table + "?select=" + cols),
+      selectWhere: (cols, filter) => api(table + "?select=" + cols + "&" + filter),
+      insert: (body) => api(table, { method:"POST", body: JSON.stringify(body) }),
+      upsert: (body) => api(table, { method:"POST",
+        headers: {...headers, "Prefer":"return=representation,resolution=merge-duplicates"},
+        body: JSON.stringify(body) }),
+      update: (body, filter) => api(table + "?" + filter, { method:"PATCH", body: JSON.stringify(body) }),
+      delete: (filter) => api(table + "?" + filter, { method:"DELETE" }),
+    })
+  };
+})();
+
+// ================================================================
 // STATE
 // ================================================================
-let lang=localStorage.getItem("ot_lang")||"ar";
-let workers=JSON.parse(localStorage.getItem("ot_workers")||"null")||{
-  ahmed:{name:"أحمد محمد",role:"worker",pin:"1234"},
-  khalid:{name:"خالد العتيبي",role:"technician",pin:"1234"},
-  faisal:{name:"فيصل الشمري",role:"technician",pin:"1234"},
-  omar:{name:"عمر السعيد",role:"worker",pin:"1234"},
-  saad:{name:"سعد القحطاني",role:"supervisor",pin:"1234"},
-};
-let entries=JSON.parse(localStorage.getItem("ot_entries")||"{}");
-let currentUser=null,currentRole=null,loginType="worker";
-let periodOffset=0,filterWorker=null,editingE=null,delWorkerKey=null;
-let reportType="daily",reportData=[],reportMeta={};
+let lang = localStorage.getItem("ot_lang") || "ar";
+let workers = {};   // loaded from Supabase
+let entries = {};   // loaded from Supabase, keyed by worker_id → period_key → []
+let currentUser=null, currentRole=null, loginType="worker";
+let periodOffset=0, filterWorker=null, editingE=null, delWorkerKey=null;
+let reportType="daily", reportData=[], reportMeta={};
+let dbReady = false;
 
-function t(k){return TR[lang][k]||TR.ar[k]||k;}
-function save(){localStorage.setItem("ot_workers",JSON.stringify(workers));localStorage.setItem("ot_entries",JSON.stringify(entries));localStorage.setItem("ot_lang",lang);}
+function t(k){ return TR[lang][k]||TR.ar[k]||k; }
+function saveLang(){ localStorage.setItem("ot_lang", lang); }
+
+// ================================================================
+// LOADING SCREEN
+// ================================================================
+function showLoading(v){
+  document.getElementById("loadingOverlay").classList.toggle("show", v);
+}
+function showDbError(msg){
+  const h=document.getElementById("lHint");
+  if(h){ h.textContent=msg; h.style.color="#C0392B"; h.style.fontWeight="600"; }
+}
+
+// ================================================================
+// DB — LOAD ALL DATA
+// ================================================================
+async function loadAll(){
+  showLoading(true);
+  try {
+    // Load workers
+    const wRes = await sb.from("workers").select("*");
+    if(!wRes.ok){ showDbError("❌ خطأ في الاتصال بقاعدة البيانات — تحقق من SUPABASE_URL و SUPABASE_KEY"); showLoading(false); return false; }
+    workers = {};
+    (wRes.data||[]).forEach(w => { workers[w.id] = { name:w.name, role:w.role, pin:w.pin }; });
+
+    // Load all entries
+    const eRes = await sb.from("overtime_entries").select("*");
+    entries = {};
+    (eRes.data||[]).forEach(e => {
+      if(!entries[e.worker_id]) entries[e.worker_id] = {};
+      const pk = periodKeyFromDate(e.date);
+      if(!entries[e.worker_id][pk]) entries[e.worker_id][pk] = [];
+      entries[e.worker_id][pk].push({
+        id: e.id, date: e.date, hours: e.hours,
+        project: e.project, city: e.city,
+        food: e.food, status: e.status
+      });
+    });
+    dbReady = true;
+    showLoading(false);
+    return true;
+  } catch(err){
+    showDbError("❌ تعذّر الاتصال — تأكد من إعدادات Supabase");
+    showLoading(false);
+    return false;
+  }
+}
+
+// Convert stored date "yyyy/mm/dd" to period key
+function periodKeyFromDate(dateStr){
+  const parts = dateStr.split("/");
+  if(parts.length < 3) return "0-0";
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  // Period: 26th of prev month → 25th of this month
+  let py = d.getFullYear(), pm = d.getMonth();
+  if(d.getDate() <= 25){ pm -= 1; if(pm < 0){ pm = 11; py--; } }
+  return py + "-" + pm;
+}
+
+function getEnt(wk, pk){
+  if(!entries[wk]) entries[wk] = {};
+  if(!entries[wk][pk]) entries[wk][pk] = [];
+  return entries[wk][pk];
+}
+
+// ================================================================
+// DB — ADD ENTRY
+// ================================================================
+async function dbAddEntry(workerID, entryObj){
+  const res = await sb.from("overtime_entries").insert({
+    id: entryObj.id,
+    worker_id: workerID,
+    date: entryObj.date,
+    hours: entryObj.hours,
+    project: entryObj.project,
+    city: entryObj.city,
+    food: entryObj.food,
+    status: entryObj.status
+  });
+  return res.ok;
+}
+
+// ================================================================
+// DB — UPDATE ENTRY STATUS
+// ================================================================
+async function dbUpdateStatus(entryId, status){
+  const res = await sb.from("overtime_entries")
+    .update({ status }, "id=eq." + entryId);
+  return res.ok;
+}
+
+// ================================================================
+// DB — UPDATE ENTRY (full edit)
+// ================================================================
+async function dbUpdateEntry(entryId, fields){
+  const res = await sb.from("overtime_entries")
+    .update(fields, "id=eq." + entryId);
+  return res.ok;
+}
+
+// ================================================================
+// DB — ADD WORKER
+// ================================================================
+async function dbAddWorker(id, worker){
+  const res = await sb.from("workers").insert({ id, name:worker.name, role:worker.role, pin:worker.pin });
+  return res.ok;
+}
+
+// ================================================================
+// DB — UPDATE WORKER
+// ================================================================
+async function dbUpdateWorker(id, fields){
+  const res = await sb.from("workers").update(fields, "id=eq." + id);
+  return res.ok;
+}
+
+// ================================================================
+// DB — DELETE WORKER (cascade deletes entries)
+// ================================================================
+async function dbDeleteWorker(id){
+  const res = await sb.from("workers").delete("id=eq." + id);
+  return res.ok;
+}
+
 
 // ================================================================
 // HELPERS
@@ -815,7 +964,7 @@ function refreshPeriod(){
 // LANGUAGE
 // ================================================================
 function setLang(l){
-  lang=l;save();
+  lang=l;saveLang();
   document.body.className="lang-"+l;
   document.documentElement.lang=l;
   document.documentElement.dir=TR[l].dir;
@@ -889,12 +1038,18 @@ function doLogin(){
     showApp("supervisor");
   }
 }
-function showApp(role){
+async function showApp(role){
   document.getElementById("loginScreen").style.display="none";
   document.getElementById("mainApp").style.display="block";
   document.getElementById("workerPage").className=role==="worker"?"page active":"page";
   document.getElementById("supervisorPage").className=role==="supervisor"?"page active":"page";
-  periodOffset=0;filterWorker=null;refreshPeriod();
+  periodOffset=0;filterWorker=null;
+  // Refresh data from Supabase on login
+  showLoading(true);
+  await loadAll();
+  buildWorkerSel();
+  showLoading(false);
+  refreshPeriod();
   if(role==="worker")renderWT();
   else{renderSO();renderMW();buildReportWorkers();updateReportDateUI();}
 }
@@ -923,19 +1078,25 @@ function showSupTab(tab){
 // ================================================================
 // WORKER TABLE
 // ================================================================
-function addEntry(){
+async function addEntry(){
   const h=parseFloat(document.getElementById("entryHours").value);
   const pr=document.getElementById("entryProject").value.trim();
   const ci=document.getElementById("entryCity").value;
   const fo=document.getElementById("entryFood").checked;
   if(!pr||!ci)return toast(t("errFill"));
   if(isNaN(h)||h<=0||h>16)return toast(t("errHours"));
+  const entry={date:getTodayStr(),hours:h,project:pr,city:ci,food:fo,status:"pending",id:Date.now()};
+  showLoading(true);
+  const ok = await dbAddEntry(currentUser, entry);
+  if(!ok){ showLoading(false); return toast("❌ فشل الحفظ — حاول مرة أخرى"); }
   const p=getPeriod(periodOffset);
-  getEnt(currentUser,p.key).push({date:getTodayStr(),hours:h,project:pr,city:ci,food:fo,status:"pending",id:Date.now()});
-  save();
-  document.getElementById("entryHours").value="";document.getElementById("entryProject").value="";
-  document.getElementById("entryCity").value="";document.getElementById("entryFood").checked=false;
-  renderWT();toast(t("toastAdded"));
+  getEnt(currentUser,p.key).push(entry);
+  showLoading(false);
+  document.getElementById("entryHours").value="";
+  document.getElementById("entryProject").value="";
+  document.getElementById("entryCity").value="";
+  document.getElementById("entryFood").checked=false;
+  renderWT(); toast(t("toastAdded"));
 }
 function renderWT(){
   const p=getPeriod(periodOffset),list=getEnt(currentUser,p.key);
@@ -1004,9 +1165,14 @@ function renderSO(){
   );
 }
 function setFilter(wk){filterWorker=wk;renderSO();}
-function chStatus(wk,id,status){
+async function chStatus(wk,id,status){
   const p=getPeriod(periodOffset),list=getEnt(wk,p.key),e=list.find(e=>String(e.id)===String(id));
-  if(e){e.status=status;save();renderSO();toast(status==="approved"?t("toastAppr"):t("toastRej"));}
+  if(!e)return;
+  showLoading(true);
+  const ok = await dbUpdateStatus(id, status);
+  if(!ok){ showLoading(false); return toast("❌ فشل التحديث"); }
+  e.status=status; showLoading(false);
+  renderSO(); toast(status==="approved"?t("toastAppr"):t("toastRej"));
 }
 
 // ================================================================
@@ -1034,15 +1200,21 @@ function openEdit(wk,id){
   document.getElementById("editModal").style.display="flex";
 }
 function closeEditModal(){document.getElementById("editModal").style.display="none";editingE=null;}
-function confirmEdit(){
+async function confirmEdit(){
   if(!editingE)return;
   const nd=document.getElementById("editDate").value,nh=parseFloat(document.getElementById("editHours").value);
   const np=document.getElementById("editProject").value.trim(),nc=document.getElementById("editCity").value;
   const ns=document.getElementById("editStatus").value,nf=document.getElementById("editFood").checked;
   if(!nd||isNaN(nh)||!np||!nc)return toast(t("errFill"));
   if(nh<=0||nh>16)return toast(t("errHours"));
+  showLoading(true);
+  const ok = await dbUpdateEntry(editingE.id, {
+    date: nd.replace(/-/g,"/"), hours:nh, project:np, city:nc, status:ns, food:nf
+  });
+  if(!ok){ showLoading(false); return toast("❌ فشل الحفظ"); }
   const p=getPeriod(periodOffset),list=getEnt(editingE.wk,p.key),e=list.find(e=>String(e.id)===String(editingE.id));
-  if(e){e.date=nd.replace(/-/g,"/");e.hours=nh;e.project=np;e.city=nc;e.status=ns;e.food=nf;save();closeEditModal();renderSO();toast(t("toastSaved"));}
+  if(e){ e.date=nd.replace(/-/g,"/");e.hours=nh;e.project=np;e.city=nc;e.status=ns;e.food=nf; }
+  showLoading(false); closeEditModal(); renderSO(); toast(t("toastSaved"));
 }
 
 // ================================================================
@@ -1067,28 +1239,41 @@ function renderMW(){
     <td><button class="bsr" onclick="openDel('${k}')">${t("btnDelete")}</button></td>
   </tr>`).join("")}</tbody></table></div>`;
 }
-function addWorker(){
+async function addWorker(){
   const name=document.getElementById("newWName").value.trim();
   const role=document.getElementById("newWRole").value;
   const pin=document.getElementById("newWPin").value.trim();
   if(!name)return toast(t("errWName"));
   if(pin.length<4||!/^\d+$/.test(pin))return toast(t("errPinFmt"));
-  workers["w_"+Date.now()]={name,role,pin};save();
+  const id="w_"+Date.now();
+  showLoading(true);
+  const ok=await dbAddWorker(id,{name,role,pin});
+  if(!ok){showLoading(false);return toast("❌ فشل الإضافة");}
+  workers[id]={name,role,pin};
+  showLoading(false);
   document.getElementById("newWName").value="";document.getElementById("newWPin").value="";
   buildWorkerSel();renderMW();buildReportWorkers();toast(t("toastWAdded"));
 }
-function chRole(k,r){workers[k].role=r;save();buildWorkerSel();}
+async function chRole(k,r){
+  showLoading(true);
+  const ok=await dbUpdateWorker(k,{role:r});
+  if(!ok){showLoading(false);return toast("❌ فشل التحديث");}
+  workers[k].role=r;showLoading(false);buildWorkerSel();
+}
 function openDel(k){
   delWorkerKey=k;
   document.getElementById("dConfirmTxt").innerHTML=t("delMsg1")+" <strong>"+workers[k].name+"</strong>? "+t("delMsg2");
   document.getElementById("deleteModal").style.display="flex";
 }
 function closeDelModal(){document.getElementById("deleteModal").style.display="none";delWorkerKey=null;}
-function confirmDel(){
+async function confirmDel(){
   if(!delWorkerKey)return;
   const name=workers[delWorkerKey].name;
+  showLoading(true);
+  const ok=await dbDeleteWorker(delWorkerKey);
+  if(!ok){showLoading(false);return toast("❌ فشل الحذف");}
   delete workers[delWorkerKey];delete entries[delWorkerKey];
-  save();closeDelModal();buildWorkerSel();renderMW();renderSO();buildReportWorkers();
+  showLoading(false);closeDelModal();buildWorkerSel();renderMW();renderSO();buildReportWorkers();
   toast(t("toastWDel")+": "+name);
 }
 
@@ -1474,8 +1659,28 @@ function exportXLS(data,sheetName,fileName){
 // TOAST
 function toast(msg){const el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2500);}
 
-// INIT
-setLang(lang);buildWorkerSel();buildCitySel("entryCity");buildCitySel("editCity");
+// ================================================================
+// INIT — load from Supabase then show login
+// ================================================================
+async function init(){
+  // Apply language first (fast, local)
+  setLang(lang);
+  buildCitySel("entryCity");
+  buildCitySel("editCity");
+  // Show loading while fetching from Supabase
+  showLoading(true);
+  const ok = await loadAll();
+  if(ok){
+    buildWorkerSel();
+  } else {
+    // If Supabase not configured, show config message
+    if(SUPABASE_URL==="YOUR_SUPABASE_URL"){
+      showDbError("⚙️ ضع SUPABASE_URL و SUPABASE_KEY في الكود أولاً");
+    }
+  }
+  showLoading(false);
+}
+init();
 </script>
 </body>
 </html>
