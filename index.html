@@ -194,7 +194,7 @@ body.lang-ar .action-btns, body.lang-ur .action-btns { justify-content: flex-end
 .rtype-btn { padding: 7px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; font-weight: 500; border: 1.5px solid #E5E5E5; background: white; color: #666; font-family: inherit; }
 .rtype-btn.active { background: #185FA5; border-color: #185FA5; color: white; font-weight: 600; }
 .workers-checkboxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
-.wcheck { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1.5px solid #E5E5E5; border-radius: 8px; cursor: pointer; }
+.wcheck { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1.5px solid #E5E5E5; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
 .wcheck input { width: 15px; height: 15px; cursor: pointer; margin: 0; }
 .wcheck label { font-size: 13px; cursor: pointer; color: #1a1a1a; }
 .wcheck.checked { border-color: #185FA5; background: #F0F7FF; }
@@ -318,8 +318,26 @@ body.lang-en .modal-actions { justify-content: flex-start; }
             <div class="field-group" style="margin:0;"><label class="field-label" id="lDate">التاريخ (اليوم تلقائياً)</label>
               <div class="date-locked"><span style="font-size:16px;">📅</span><span class="date-locked-text" id="todayTxt">—</span><span class="date-locked-badge" id="todayBadge">اليوم</span></div>
             </div>
-            <div class="field-group" style="margin:0;"><label class="field-label" id="lHours">عدد الساعات</label><input type="number" id="entryHours" min="0.5" max="16" step="0.5"/></div>
+            <div class="field-group" style="margin:0;"><label class="field-label" id="lHours">عدد الساعات</label>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input type="number" id="entryHours" min="0.5" max="24" step="0.5" style="flex:1;" oninput="clearTimePicker()" placeholder="0"/>
+                <span style="font-size:11px;color:#888;white-space:nowrap;" id="lOrTime">أو</span>
+              </div>
+            </div>
           </div>
+          <!-- من / إلى -->
+          <div class="form-row" style="margin-bottom:12px;">
+            <div class="field-group" style="margin:0;">
+              <label class="field-label" id="lFromTime">من الساعة</label>
+              <input type="time" id="entryFrom" onchange="calcHoursFromTime()" style="direction:ltr;"/>
+            </div>
+            <div class="field-group" style="margin:0;">
+              <label class="field-label" id="lToTime">إلى الساعة</label>
+              <input type="time" id="entryTo" onchange="calcHoursFromTime()" style="direction:ltr;"/>
+            </div>
+          </div>
+          <!-- hours preview -->
+          <div id="hoursPreview" style="display:none;background:#E6F1FB;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:13px;color:#185FA5;font-weight:600;"></div>
           <div class="form-row">
             <div class="field-group" style="margin:0;"><label class="field-label" id="lProject">اسم المشروع</label><input type="text" id="entryProject"/></div>
             <div class="field-group" style="margin:0;"><label class="field-label" id="lCity">المدينة</label><select id="entryCity"></select></div>
@@ -375,17 +393,41 @@ body.lang-en .modal-actions { justify-content: flex-start; }
           <div class="stat-card"><div class="stat-label" id="ss2l">بانتظار الموافقة</div><div class="stat-value" id="sPendC">0</div><div class="stat-sub" id="ss2s">سجل</div></div>
           <div class="stat-card"><div class="stat-label" id="ss3l">معتمدة</div><div class="stat-value" id="sApprC">0</div><div class="stat-sub" id="ss3s">سجل</div></div>
         </div>
-        <div class="section-header no-print" id="empHeader">الموظفون</div>
-        <div class="workers-grid no-print" id="workersGrid"></div>
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title" id="sTableT">جميع السجلات</span>
-            <div class="card-actions no-print">
-              <button class="btn-excel" onclick="exportSExcel()">Excel ↓</button>
-              <button class="btn-pdf" onclick="printSupTable()">🖨 PDF</button>
+
+        <!-- WORKER MULTI-SELECT FILTER -->
+        <div class="no-print" style="background:white;border:1px solid #EAEAEA;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+            <div style="font-size:13px;font-weight:600;color:#1a1a1a;" id="empHeader">اختر الموظفين</div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn-outline" onclick="soSelectAll(true)" id="soSelAll" style="font-size:12px;">تحديد الكل</button>
+              <button class="btn-outline" onclick="soSelectAll(false)" id="soSelNone" style="font-size:12px;">إلغاء الكل</button>
             </div>
           </div>
-          <div id="sTableBody"><div class="empty-state"><div class="empty-icon">📋</div>لا توجد سجلات.</div></div>
+          <div id="soWorkersCheck" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;"></div>
+        </div>
+
+        <!-- TABLE 1: PENDING -->
+        <div class="card" style="margin-bottom:1.25rem;">
+          <div class="card-header">
+            <span class="card-title" id="sPendTitle">طلبات قيد الاعتماد</span>
+            <div class="card-actions no-print">
+              <button class="btn-excel" onclick="exportSExcel('pending')" id="btnExPend">Excel ↓</button>
+              <button class="btn-pdf" onclick="printSOTable('pending')" id="btnPdfPend">🖨 PDF</button>
+            </div>
+          </div>
+          <div id="sPendBody"><div class="empty-state"><div class="empty-icon">⏳</div><span id="emptyPend">لا توجد طلبات معلقة.</span></div></div>
+        </div>
+
+        <!-- TABLE 2: APPROVED -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" id="sApprTitle">طلبات تم اعتمادها</span>
+            <div class="card-actions no-print">
+              <button class="btn-excel" onclick="exportSExcel('approved')" id="btnExAppr">Excel ↓</button>
+              <button class="btn-pdf" onclick="printSOTable('approved')" id="btnPdfAppr">🖨 PDF</button>
+            </div>
+          </div>
+          <div id="sApprBody"><div class="empty-state"><div class="empty-icon">✅</div><span id="emptyAppr">لا توجد طلبات معتمدة.</span></div></div>
         </div>
       </div>
 
@@ -477,8 +519,13 @@ body.lang-en .modal-actions { justify-content: flex-start; }
     <div class="modal-title"><div class="modal-title-icon">✏️</div><span id="eModalT">تعديل السجل</span></div>
     <div class="modal-grid">
       <div class="field-group" style="margin:0;"><label class="field-label" id="eLDate">التاريخ</label><input type="date" id="editDate"/></div>
-      <div class="field-group" style="margin:0;"><label class="field-label" id="eLHours">الساعات</label><input type="number" id="editHours" min="0.5" max="16" step="0.5"/></div>
+      <div class="field-group" style="margin:0;"><label class="field-label" id="eLHours">الساعات</label><input type="number" id="editHours" min="0.5" max="24" step="0.5" oninput="clearEditTime()"/></div>
     </div>
+    <div class="modal-grid">
+      <div class="field-group" style="margin:0;"><label class="field-label" id="eLFromTime">من الساعة</label><input type="time" id="editFrom" style="direction:ltr;" onchange="calcEditHours()"/></div>
+      <div class="field-group" style="margin:0;"><label class="field-label" id="eLToTime">إلى الساعة</label><input type="time" id="editTo" style="direction:ltr;" onchange="calcEditHours()"/></div>
+    </div>
+    <div id="editHoursPreview" style="display:none;background:#E6F1FB;border-radius:8px;padding:6px 12px;margin-bottom:8px;font-size:12px;color:#185FA5;font-weight:600;"></div>
     <div class="modal-grid">
       <div class="field-group" style="margin:0;"><label class="field-label" id="eLProj">المشروع</label><input type="text" id="editProject"/></div>
       <div class="field-group" style="margin:0;"><label class="field-label" id="eLCity">المدينة</label><select id="editCity"></select></div>
@@ -549,13 +596,19 @@ const TR = {
     ss1l:"إجمالي الساعات", ss1s:"جميع الموظفين",
     ss2l:"بانتظار الموافقة", ss2s:"سجل",
     ss3l:"معتمدة", ss3s:"سجل",
-    empHeader:"الموظفون",
+    empHeader:"اختر الموظفين",
+    sPendTitle:"طلبات قيد الاعتماد",
+    sApprTitle:"طلبات تم اعتمادها",
+    soSelAll:"تحديد الكل", soSelNone:"إلغاء الكل",
     addWTitle:"إضافة موظف جديد",
     lNewName:"الاسم الكامل", newNamePH:"مثال: محمد العمري",
     lNewRole:"الصفة الوظيفية",
     lNewPin:"رمز الدخول (4 أرقام)", newPinPH:"1234",
     btnAW:"إضافة", wListTitle:"قائمة الموظفين",
     rW:"عامل", rT:"فني", rS:"مشرف",
+    lFromTime:"من الساعة", lToTime:"إلى الساعة", lOrTime:"أو",
+    eLFromTime:"من الساعة", eLToTime:"إلى الساعة",
+    thTime:"الوقت (من/إلى)",
     eModalT:"تعديل السجل",
     eLDate:"التاريخ", eLHours:"الساعات", eLProj:"المشروع", eLCity:"المدينة",
     eLStatus:"الحالة", eLFood:"بدل طعام",
@@ -617,11 +670,17 @@ const TR = {
     sTab1:"Monitor & Approve", sTab2:"Reports", sTab3:"Manage Employees",
     ss1l:"Total Hours", ss1s:"All employees", ss2l:"Pending", ss2s:"records",
     ss3l:"Approved", ss3s:"records",
-    empHeader:"Employees", addWTitle:"Add New Employee",
+    empHeader:"Select Employees",
+    sPendTitle:"Pending Approvals",
+    sApprTitle:"Approved Requests",
+    soSelAll:"Select All", soSelNone:"Clear All",
     lNewName:"Full Name", newNamePH:"e.g. Mohammed Al-Omari",
     lNewRole:"Job Title", lNewPin:"PIN Code (4 digits)", newPinPH:"1234",
     btnAW:"Add", wListTitle:"Employee List",
     rW:"Worker", rT:"Technician", rS:"Supervisor",
+    lFromTime:"From", lToTime:"To", lOrTime:"or",
+    eLFromTime:"From", eLToTime:"To",
+    thTime:"Time (From/To)",
     eModalT:"Edit Record",
     eLDate:"Date", eLHours:"Hours", eLProj:"Project", eLCity:"City",
     eLStatus:"Status", eLFood:"Food Allowance",
@@ -683,11 +742,17 @@ const TR = {
     sTab1:"نگرانی اور منظوری", sTab2:"رپورٹس", sTab3:"ملازمین انتظام",
     ss1l:"کل گھنٹے", ss1s:"تمام ملازمین", ss2l:"زیر التوا", ss2s:"ریکارڈ",
     ss3l:"منظور شدہ", ss3s:"ریکارڈ",
-    empHeader:"ملازمین", addWTitle:"نیا ملازم",
+    empHeader:"ملازمین منتخب کریں",
+    sPendTitle:"زیر التوا درخواستیں",
+    sApprTitle:"منظور شدہ درخواستیں",
+    soSelAll:"سب منتخب", soSelNone:"سب ہٹائیں",
     lNewName:"پورا نام", newNamePH:"مثلاً: محمد",
     lNewRole:"عہدہ", lNewPin:"پن (4 ہندسے)", newPinPH:"1234",
     btnAW:"شامل", wListTitle:"ملازمین کی فہرست",
     rW:"مزدور", rT:"ٹیکنیشن", rS:"سپروائزر",
+    lFromTime:"شروع وقت", lToTime:"ختم وقت", lOrTime:"یا",
+    eLFromTime:"شروع وقت", eLToTime:"ختم وقت",
+    thTime:"وقت (شروع/ختم)",
     eModalT:"ریکارڈ ترمیم",
     eLDate:"تاریخ", eLHours:"گھنٹے", eLProj:"پروجیکٹ", eLCity:"شہر",
     eLStatus:"حیثیت", eLFood:"کھانا",
@@ -806,7 +871,8 @@ async function loadAll(){
       entries[e.worker_id][pk].push({
         id: e.id, date: e.date, hours: e.hours,
         project: e.project, city: e.city,
-        food: e.food, status: e.status
+        food: e.food, status: e.status,
+        timeFrom: e.time_from||"", timeTo: e.time_to||""
       });
     });
     dbReady = true;
@@ -848,7 +914,9 @@ async function dbAddEntry(workerID, entryObj){
     project: entryObj.project,
     city: entryObj.city,
     food: entryObj.food,
-    status: entryObj.status
+    status: entryObj.status,
+    time_from: entryObj.timeFrom||"",
+    time_to: entryObj.timeTo||""
   });
   return res.ok;
 }
@@ -972,7 +1040,7 @@ function setLang(l){
   applyTR();buildWorkerSel();buildCitySel("entryCity");buildCitySel("editCity");
   refreshPeriod();
   if(currentRole==="worker")renderWT();
-  else if(currentRole==="supervisor"){renderSO();renderMW();buildReportWorkers();updateReportDateUI();}
+  else if(currentRole==="supervisor"){renderSO();renderMW();buildSOWorkers();buildReportWorkers();updateReportDateUI();}
 }
 
 function applyTR(){
@@ -988,10 +1056,15 @@ function applyTR(){
     btnAddE:"btnAddE",wTableT:"wTableT",emptyW:"emptyMsg",
     sTab1:"sTab1",sTab2:"sTab2",sTab3:"sTab3",
     ss1l:"ss1l",ss1s:"ss1s",ss2l:"ss2l",ss2s:"ss2s",ss3l:"ss3l",ss3s:"ss3s",
-    empHeader:"empHeader",addWTitle:"addWTitle",
+    empHeader:"empHeader",
+    sPendTitle:"sPendTitle", sApprTitle:"sApprTitle",
+    soSelAll:"soSelAll", soSelNone:"soSelNone",
+    addWTitle:"addWTitle",
     lNewName:"lNewName",lNewRole:"lNewRole",lNewPin:"lNewPin",
     btnAW:"btnAW",wListTitle:"wListTitle",
     rW:"rW",rT:"rT",rS:"rS",
+    lFromTime:"lFromTime",lToTime:"lToTime",lOrTime:"lOrTime",
+    eLFromTime:"eLFromTime",eLToTime:"eLToTime",
     eModalT:"eModalT",eLDate:"eLDate",eLHours:"eLHours",eLProj:"eLProj",eLCity:"eLCity",
     eLStatus:"eLStatus",eLFood:"eLFood",eCancelB:"eCancelB",eConfirmB:"eConfirmB",
     eStP:"stPShort",eStA:"stApproved",eStR:"stRejected",
@@ -1051,7 +1124,7 @@ async function showApp(role){
   showLoading(false);
   refreshPeriod();
   if(role==="worker")renderWT();
-  else{renderSO();renderMW();buildReportWorkers();updateReportDateUI();}
+  else{renderSO();renderMW();buildSOWorkers();buildReportWorkers();updateReportDateUI();}
 }
 function logout(){
   currentUser=null;currentRole=null;periodOffset=0;filterWorker=null;
@@ -1073,19 +1146,60 @@ function showSupTab(tab){
   document.getElementById("supManage").className="tab-section"+(tab==="manage"?" active":"");
   if(tab==="manage")renderMW();
   if(tab==="reports"){buildReportWorkers();updateReportDateUI();}
+  if(tab==="overview"){buildSOWorkers();renderSO();}
 }
 
 // ================================================================
 // WORKER TABLE
 // ================================================================
+// ================================================================
+// TIME PICKER — auto-calculate hours from/to
+// ================================================================
+function calcHoursFromTime(){
+  const fromEl=document.getElementById("entryFrom");
+  const toEl=document.getElementById("entryTo");
+  const hoursEl=document.getElementById("entryHours");
+  const preview=document.getElementById("hoursPreview");
+  if(!fromEl.value||!toEl.value){preview.style.display="none";return;}
+  const [fh,fm]=fromEl.value.split(":").map(Number);
+  const [th,tm]=toEl.value.split(":").map(Number);
+  let totalMins=(th*60+tm)-(fh*60+fm);
+  if(totalMins<=0) totalMins+=24*60; // overnight shift
+  const hrs=Math.round(totalMins/60*10)/10; // round to 1 decimal
+  hoursEl.value=hrs;
+  const fromFmt=formatTime12(fromEl.value);
+  const toFmt=formatTime12(toEl.value);
+  preview.style.display="block";
+  preview.textContent="⏱ "+fromFmt+" → "+toFmt+" = "+hrs+" "+t("hoursU");
+}
+function clearTimePicker(){
+  // If user types hours manually, clear the time fields
+  const fromEl=document.getElementById("entryFrom");
+  const toEl=document.getElementById("entryTo");
+  const preview=document.getElementById("hoursPreview");
+  if(fromEl)fromEl.value="";
+  if(toEl)toEl.value="";
+  if(preview)preview.style.display="none";
+}
+function formatTime12(timeStr){
+  if(!timeStr)return "";
+  const [h,m]=timeStr.split(":").map(Number);
+  const ampm=h>=12?"م":"ص";
+  const h12=h%12||12;
+  return h12+":"+(m<10?"0"+m:m)+" "+ampm;
+}
+
 async function addEntry(){
   const h=parseFloat(document.getElementById("entryHours").value);
   const pr=document.getElementById("entryProject").value.trim();
   const ci=document.getElementById("entryCity").value;
   const fo=document.getElementById("entryFood").checked;
+  const fromT=document.getElementById("entryFrom").value||"";
+  const toT=document.getElementById("entryTo").value||"";
   if(!pr||!ci)return toast(t("errFill"));
-  if(isNaN(h)||h<=0||h>16)return toast(t("errHours"));
-  const entry={date:getTodayStr(),hours:h,project:pr,city:ci,food:fo,status:"pending",id:Date.now()};
+  if(isNaN(h)||h<=0||h>24)return toast(t("errHours"));
+  const entry={date:getTodayStr(),hours:h,project:pr,city:ci,food:fo,status:"pending",id:Date.now(),
+    timeFrom:fromT, timeTo:toT};
   showLoading(true);
   const ok = await dbAddEntry(currentUser, entry);
   if(!ok){ showLoading(false); return toast("❌ فشل الحفظ — حاول مرة أخرى"); }
@@ -1096,7 +1210,15 @@ async function addEntry(){
   document.getElementById("entryProject").value="";
   document.getElementById("entryCity").value="";
   document.getElementById("entryFood").checked=false;
+  document.getElementById("entryFrom").value="";
+  document.getElementById("entryTo").value="";
+  const prev=document.getElementById("hoursPreview");
+  if(prev)prev.style.display="none";
   renderWT(); toast(t("toastAdded"));
+}
+function fmtTimeRange(e){
+  if(e.timeFrom&&e.timeTo) return formatTime12(e.timeFrom)+"–"+formatTime12(e.timeTo);
+  return "—";
 }
 function renderWT(){
   const p=getPeriod(periodOffset),list=getEnt(currentUser,p.key);
@@ -1107,11 +1229,11 @@ function renderWT(){
   if(!list.length){body.innerHTML="<div class='empty-state'><div class='empty-icon'>📋</div>"+t("emptyMsg")+"</div>";return;}
   const totalH=list.reduce((s,e)=>s+e.hours,0),foodD=list.filter(e=>e.food).length;
   body.innerHTML=buildTable(
-    [t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")],
-    list.map(e=>[e.date,e.project,cityLabel(e.city),e.hours,
+    [t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")],
+    list.map(e=>[e.date,fmtTimeRange(e),e.project,cityLabel(e.city),e.hours,
       e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
       "<span class='badge "+stClass(e.status)+"'>"+stLabel(e.status)+"</span>"]),
-    [t("totalLbl"),"","",
+    [t("totalLbl"),"","","",
       "<span class='tp tp-b'>"+totalH+" "+t("hoursU")+"</span>",
       "<span class='tp tp-a'>"+foodD+" "+t("foodU")+"</span>",
       "<span class='tp tp-g'>"+list.length+" "+t("workU")+"</span>"]
@@ -1121,50 +1243,131 @@ function renderWT(){
 // ================================================================
 // SUPERVISOR OVERVIEW
 // ================================================================
+// ================================================================
+// SUPERVISOR OVERVIEW — multi-select workers, two tables
+// ================================================================
+function buildSOWorkers(){
+  const div=document.getElementById("soWorkersCheck"); if(!div)return;
+  div.innerHTML=Object.keys(workers).map(k=>`
+    <div class="wcheck checked" id="sow_${k}" onclick="toggleSOWorker('${k}')">
+      <input type="checkbox" id="sowcb_${k}" checked/>
+      <label for="sowcb_${k}" style="pointer-events:none;">${workers[k].name}
+        <span style="font-size:10px;color:#888;"> (${roleLabel(workers[k].role)})</span>
+      </label>
+    </div>`).join("");
+}
+function toggleSOWorker(k){
+  const cb=document.getElementById("sowcb_"+k);
+  if(cb){cb.checked=!cb.checked;document.getElementById("sow_"+k).classList.toggle("checked",cb.checked);}
+  renderSO();
+}
+function soSelectAll(val){
+  Object.keys(workers).forEach(k=>{
+    const cb=document.getElementById("sowcb_"+k);
+    if(cb){cb.checked=val;document.getElementById("sow_"+k).classList.toggle("checked",val);}
+  });
+  renderSO();
+}
+function getSOSelected(){
+  return Object.keys(workers).filter(k=>document.getElementById("sowcb_"+k)?.checked);
+}
+
 function renderSO(){
-  const p=getPeriod(periodOffset);let all=[];
-  Object.keys(workers).forEach(wk=>getEnt(wk,p.key).forEach(e=>all.push({...e,wk,wName:workers[wk].name,wRole:workers[wk].role})));
-  document.getElementById("sTotH").textContent=all.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
-  document.getElementById("sPendC").textContent=all.filter(e=>e.status==="pending").length;
-  document.getElementById("sApprC").textContent=all.filter(e=>e.status==="approved").length;
-  document.getElementById("workersGrid").innerHTML=Object.keys(workers).map(wk=>{
-    const list=getEnt(wk,p.key),hrs=list.reduce((s,e)=>s+e.hours,0),pend=list.filter(e=>e.status==="pending").length,sel=filterWorker===wk;
-    return`<div class="worker-card ${sel?"selected":""}" onclick="setFilter('${wk}')">
-      <div class="worker-avatar">${initials(workers[wk].name)}</div>
-      <div class="worker-name">${workers[wk].name}</div>
-      <div style="margin-top:4px;"><span class="badge ${roleClass(workers[wk].role)}" style="font-size:10px;">${roleLabel(workers[wk].role)}</span></div>
-      <div class="worker-hours">${hrs} ${t("hoursU")}</div>
-      ${pend?`<span class="worker-pending">${pend} ${t("pendOf")}</span>`:""}
+  const p=getPeriod(periodOffset);
+  const selWks=getSOSelected();
+  let all=[];
+  Object.keys(workers).forEach(wk=>{
+    if(!selWks.includes(wk))return;
+    getEnt(wk,p.key).forEach(e=>all.push({...e,wk,wName:workers[wk].name,wRole:workers[wk].role}));
+  });
+
+  // Stats over ALL workers
+  let allForStats=[];
+  Object.keys(workers).forEach(wk=>getEnt(wk,p.key).forEach(e=>allForStats.push(e)));
+  document.getElementById("sTotH").textContent=allForStats.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
+  document.getElementById("sPendC").textContent=allForStats.filter(e=>e.status==="pending").length;
+  document.getElementById("sApprC").textContent=allForStats.filter(e=>e.status==="approved").length;
+
+  const pending=all.filter(e=>e.status==="pending");
+  const approved=all.filter(e=>e.status==="approved");
+
+  // Pending table
+  const pendBody=document.getElementById("sPendBody");
+  if(pendBody){
+    if(!pending.length){
+      pendBody.innerHTML="<div class='empty-state'><div class='empty-icon'>⏳</div>"+t("emptyMsg")+"</div>";
+    } else {
+      pendBody.innerHTML=buildGroupedTable(pending,true);
+    }
+  }
+
+  // Approved table
+  const apprBody=document.getElementById("sApprBody");
+  if(apprBody){
+    if(!approved.length){
+      apprBody.innerHTML="<div class='empty-state'><div class='empty-icon'>✅</div>"+t("emptyMsg")+"</div>";
+    } else {
+      apprBody.innerHTML=buildGroupedTable(approved,false);
+    }
+  }
+}
+
+// Build grouped table: worker header then rows (no worker/role columns)
+function buildGroupedTable(entries, showActions){
+  const groups={}, order=[];
+  entries.forEach(e=>{
+    if(!groups[e.wk]){groups[e.wk]={name:e.wName,role:e.wRole,rows:[]};order.push(e.wk);}
+    groups[e.wk].rows.push(e);
+  });
+  let html="", grandApprH=0, grandFoodD=0, grandDays=0;
+  order.forEach(wk=>{
+    const g=groups[wk];
+    const approvedH=g.rows.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
+    const foodD=g.rows.filter(e=>e.food).length;
+    grandApprH+=approvedH; grandFoodD+=foodD; grandDays+=g.rows.length;
+    // Worker header row
+    html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#E6F1FB;border-bottom:1px solid #B5D4F4;">
+      <div style="width:36px;height:36px;border-radius:50%;background:#185FA5;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${initials(g.name)}</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#185FA5;">${g.name}</div>
+        <div style="font-size:11px;color:#555;">${roleLabel(g.role)}</div>
+      </div>
     </div>`;
-  }).join("")+`<div class="worker-card ${!filterWorker?"selected":""}" onclick="setFilter(null)" style="display:flex;align-items:center;gap:10px;padding:0.875rem;">
-    <div style="font-size:26px;">👥</div><div><div class="worker-name" style="font-size:12px;">${t("allEmp")}</div><div class="worker-hours">${all.length} ${t("recOf")}</div></div>
-  </div>`;
-  const filtered=filterWorker?all.filter(e=>e.wk===filterWorker):all;
-  document.getElementById("sTableT").textContent=filterWorker?workers[filterWorker].name:t("allEmp");
-  const body=document.getElementById("sTableBody");
-  if(!filtered.length){body.innerHTML="<div class='empty-state'><div class='empty-icon'>📋</div>"+t("emptyMsg")+"</div>";return;}
-  const approvedH=filtered.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
-  const foodD=filtered.filter(e=>e.food).length;
-  body.innerHTML=buildTable(
-    [t("thWorker"),t("thRole"),t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus"),t("thActions")],
-    filtered.map(e=>[e.wName,
-      "<span class='badge "+roleClass(e.wRole)+"'>"+roleLabel(e.wRole)+"</span>",
-      e.date,e.project,cityLabel(e.city),e.hours,
-      e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
-      "<span class='badge "+stClass(e.status)+"'>"+stShort(e.status)+"</span>",
-      `<div class="action-btns no-print">
+    const cols=[t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
+    if(showActions) cols.push(t("thActions"));
+    const rows=g.rows.map(e=>{
+      const r=[
+        e.date, fmtTimeRange(e), e.project, cityLabel(e.city), e.hours,
+        e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
+        "<span class='badge "+stClass(e.status)+"'>"+stShort(e.status)+"</span>"
+      ];
+      if(showActions) r.push(`<div class="action-btns no-print">
         <button class="bsa" onclick="openEdit('${e.wk}','${e.id}')">${t("btnEdit")}</button>
         ${e.status!=="approved"?`<button class="bsg" onclick="chStatus('${e.wk}','${e.id}','approved')">${t("btnApprove")}</button>`:""}
         ${e.status!=="rejected"?`<button class="bsr" onclick="chStatus('${e.wk}','${e.id}','rejected')">${t("btnReject")}</button>`:""}
-      </div>`
-    ]),
-    [t("totalLbl"),"","","","",
-      "<span class='tp tp-b'>"+approvedH+" "+t("hoursU")+"</span>",
-      "<span class='tp tp-a'>"+foodD+" "+t("foodU")+"</span>",
-      "<span class='tp tp-g'>"+filtered.length+" "+t("workU")+"</span>",""]
-  );
+      </div>`);
+      return r;
+    });
+    const tot=Array(cols.length).fill("");
+    tot[0]=t("totalLbl");
+    tot[4]="<span class='tp tp-b'>"+approvedH+" "+t("hoursU")+"</span>";
+    tot[5]="<span class='tp tp-a'>"+foodD+" "+t("foodU")+"</span>";
+    tot[6]="<span class='tp tp-g'>"+g.rows.length+" "+t("workU")+"</span>";
+    html+=buildTable(cols,rows,tot);
+    html+="<div style='height:12px;'></div>";
+  });
+  if(order.length>1){
+    html+=`<div style="background:#1a3d6b;color:white;border-radius:8px;padding:10px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+      <strong>${t("totalLbl")} — ${t("allEmp")}</strong>
+      <span style="background:rgba(255,255,255,0.2);border-radius:20px;padding:3px 12px;font-size:12px;">${grandApprH} ${t("hoursU")}</span>
+      <span style="background:rgba(255,255,255,0.2);border-radius:20px;padding:3px 12px;font-size:12px;">${grandFoodD} ${t("foodU")}</span>
+      <span style="background:rgba(255,255,255,0.2);border-radius:20px;padding:3px 12px;font-size:12px;">${grandDays} ${t("workU")}</span>
+    </div>`;
+  }
+  return html;
 }
 function setFilter(wk){filterWorker=wk;renderSO();}
+
 async function chStatus(wk,id,status){
   const p=getPeriod(periodOffset),list=getEnt(wk,p.key),e=list.find(e=>String(e.id)===String(id));
   if(!e)return;
@@ -1185,18 +1388,36 @@ function buildTable(headers,rows,totals){
   return`<div class="tbl-wrap"><table><thead><tr>${h}</tr></thead><tbody>${r}${tot}</tbody></table></div>`;
 }
 
-// ================================================================
-// EDIT MODAL
-// ================================================================
+function calcEditHours(){
+  const f=document.getElementById("editFrom"),tt=document.getElementById("editTo");
+  const hEl=document.getElementById("editHours"),prev=document.getElementById("editHoursPreview");
+  if(!f||!tt||!f.value||!tt.value){if(prev)prev.style.display="none";return;}
+  const [fh,fm]=f.value.split(":").map(Number);
+  const [th,tm]=tt.value.split(":").map(Number);
+  let mins=(th*60+tm)-(fh*60+fm);
+  if(mins<=0)mins+=24*60;
+  const hrs=Math.round(mins/60*10)/10;
+  hEl.value=hrs;
+  if(prev){prev.style.display="block";prev.textContent="⏱ "+formatTime12(f.value)+" → "+formatTime12(tt.value)+" = "+hrs+" "+t("hoursU");}
+}
+function clearEditTime(){
+  const f=document.getElementById("editFrom"),tt=document.getElementById("editTo"),prev=document.getElementById("editHoursPreview");
+  if(f)f.value=""; if(tt)tt.value=""; if(prev)prev.style.display="none";
+}
+
 function openEdit(wk,id){
   const p=getPeriod(periodOffset),list=getEnt(wk,p.key),e=list.find(e=>String(e.id)===String(id));
   if(!e)return;editingE={wk,id};buildCitySel("editCity");
   document.getElementById("editDate").value=e.date.replace(/\//g,"-");
   document.getElementById("editHours").value=e.hours;
   document.getElementById("editProject").value=e.project;
-  document.getElementById("editCity").value=cityKey(e.city); // normalize old values
+  document.getElementById("editCity").value=cityKey(e.city);
   document.getElementById("editStatus").value=e.status;
   document.getElementById("editFood").checked=e.food;
+  document.getElementById("editFrom").value=e.timeFrom||"";
+  document.getElementById("editTo").value=e.timeTo||"";
+  const prev=document.getElementById("editHoursPreview");
+  if(prev){ if(e.timeFrom&&e.timeTo){prev.style.display="block";prev.textContent="⏱ "+formatTime12(e.timeFrom)+" → "+formatTime12(e.timeTo)+" = "+e.hours+" "+t("hoursU");}else{prev.style.display="none";} }
   document.getElementById("editModal").style.display="flex";
 }
 function closeEditModal(){document.getElementById("editModal").style.display="none";editingE=null;}
@@ -1206,14 +1427,17 @@ async function confirmEdit(){
   const np=document.getElementById("editProject").value.trim(),nc=document.getElementById("editCity").value;
   const ns=document.getElementById("editStatus").value,nf=document.getElementById("editFood").checked;
   if(!nd||isNaN(nh)||!np||!nc)return toast(t("errFill"));
-  if(nh<=0||nh>16)return toast(t("errHours"));
+  if(nh<=0||nh>24)return toast(t("errHours"));
+  const nFrom=document.getElementById("editFrom").value||"";
+  const nTo=document.getElementById("editTo").value||"";
   showLoading(true);
   const ok = await dbUpdateEntry(editingE.id, {
-    date: nd.replace(/-/g,"/"), hours:nh, project:np, city:nc, status:ns, food:nf
+    date: nd.replace(/-/g,"/"), hours:nh, project:np, city:nc, status:ns, food:nf,
+    time_from:nFrom, time_to:nTo
   });
   if(!ok){ showLoading(false); return toast("❌ فشل الحفظ"); }
   const p=getPeriod(periodOffset),list=getEnt(editingE.wk,p.key),e=list.find(e=>String(e.id)===String(editingE.id));
-  if(e){ e.date=nd.replace(/-/g,"/");e.hours=nh;e.project=np;e.city=nc;e.status=ns;e.food=nf; }
+  if(e){ e.date=nd.replace(/-/g,"/");e.hours=nh;e.project=np;e.city=nc;e.status=ns;e.food=nf;e.timeFrom=nFrom;e.timeTo=nTo; }
   showLoading(false); closeEditModal(); renderSO(); toast(t("toastSaved"));
 }
 
@@ -1252,7 +1476,7 @@ async function addWorker(){
   workers[id]={name,role,pin};
   showLoading(false);
   document.getElementById("newWName").value="";document.getElementById("newWPin").value="";
-  buildWorkerSel();renderMW();buildReportWorkers();toast(t("toastWAdded"));
+  buildWorkerSel();renderMW();buildSOWorkers();buildReportWorkers();toast(t("toastWAdded"));
 }
 async function chRole(k,r){
   showLoading(true);
@@ -1273,7 +1497,7 @@ async function confirmDel(){
   const ok=await dbDeleteWorker(delWorkerKey);
   if(!ok){showLoading(false);return toast("❌ فشل الحذف");}
   delete workers[delWorkerKey];delete entries[delWorkerKey];
-  showLoading(false);closeDelModal();buildWorkerSel();renderMW();renderSO();buildReportWorkers();
+  showLoading(false);closeDelModal();buildWorkerSel();renderMW();renderSO();buildSOWorkers();buildReportWorkers();
   toast(t("toastWDel")+": "+name);
 }
 
@@ -1410,7 +1634,7 @@ function generateReport(){
       ${grp.name} — <span class="badge ${roleClass(grp.role)}">${roleLabel(grp.role)}</span>
     </div>`;
     html+=buildTable(
-      [t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")],
+      [t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")],
       grp.entries.map(e=>[
         e.date, e.project, cityLabel(e.city), e.hours,
         e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
@@ -1505,8 +1729,8 @@ function generateMyReport(){
   if(!data.length){result.innerHTML=`<div class="no-results"><div style="font-size:36px;">📊</div><div style="margin-top:12px;">${lang==="en"?"No records found.":lang==="ur"?"کوئی ریکارڈ نہیں۔":"لا توجد سجلات."}</div></div>`;return;}
   const totalH=data.reduce((s,e)=>s+e.hours,0),foodD=data.filter(e=>e.food).length;
   const tableHtml=buildTable(
-    [t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")],
-    data.map(e=>[e.date,e.project,cityLabel(e.city),e.hours,
+    [t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")],
+    data.map(e=>[e.date,fmtTimeRange(e),e.project,cityLabel(e.city),e.hours,
       e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
       "<span class='badge "+stClass(e.status)+"'>"+stLabel(e.status)+"</span>"]),
     [t("totalLbl"),"","",
@@ -1561,22 +1785,25 @@ function printWorkerTable(){
   setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";},500);},200);
 }
 
-function printSupTable(){
+function printSOTable(statusFilter){
   const p=getPeriod(periodOffset);
+  const label=statusFilter==="pending"?t("sPendTitle"):t("sApprTitle");
   preparePDFHeader(
     ["sPdfLogo"],["sPdfTitle"],["sPdfDate"],["sPdfRight"],
-    t("allEmp")+" — "+p.label,"",
-    filterWorker?workers[filterWorker].name:t("allEmp")
+    label+" — "+p.label,"",
+    getSOSelected().map(k=>workers[k]?.name).filter(Boolean).join(", ")
   );
   document.getElementById("sPdfCompany").textContent=t("companyName");
   const header=document.getElementById("sPdfHeader");
-  const body=document.getElementById("sTableBody");
+  const bodyEl=document.getElementById(statusFilter==="pending"?"sPendBody":"sApprBody");
   let pt=document.getElementById("printTarget");
   if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
-  pt.innerHTML=header.outerHTML+body.innerHTML;
+  pt.innerHTML=header.outerHTML+(bodyEl?bodyEl.innerHTML:"");
   pt.style.display="block";
   setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";},500);},200);
 }
+// keep old name for backward compat
+function printSupTable(){ printSOTable("approved"); }
 
 function printReport(){
   const header=document.getElementById("rPdfHeader");
@@ -1620,31 +1847,68 @@ function printMyReport(){
 function exportWExcel(){
   const p=getPeriod(periodOffset),list=getEnt(currentUser,p.key);
   if(!list.length)return toast(t("toastNoData"));
-  const h=[t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
+  const h=[t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
   const r=list.map(e=>[e.date,e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stLabel(e.status)]);
   const th=list.reduce((s,e)=>s+e.hours,0),fd=list.filter(e=>e.food).length;
   exportXLS([h,...r,[t("totalLbl"),"","",th+" "+t("hoursU"),fd+" "+t("foodU"),list.length+" "+t("workU")]],workers[currentUser].name,workers[currentUser].name+"_"+p.label);
 }
-function exportSExcel(){
-  const p=getPeriod(periodOffset);let all=[];
-  Object.keys(workers).forEach(wk=>getEnt(wk,p.key).forEach(e=>all.push({...e,wk,wName:workers[wk].name,wRole:workers[wk].role})));
-  const filtered=filterWorker?all.filter(e=>e.wk===filterWorker):all;
+function exportSExcel(statusFilter){
+  const p=getPeriod(periodOffset);
+  const selWks=getSOSelected();
+  let all=[];
+  Object.keys(workers).forEach(wk=>{
+    if(!selWks.includes(wk))return;
+    getEnt(wk,p.key).forEach(e=>all.push({...e,wk,wName:workers[wk].name,wRole:workers[wk].role}));
+  });
+  const filtered=statusFilter?all.filter(e=>e.status===statusFilter):all;
   if(!filtered.length)return toast(t("toastNoData"));
-  const h=[t("thWorker"),t("thRole"),t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
-  const r=filtered.map(e=>[e.wName,roleLabel(e.wRole),e.date,e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stShort(e.status)]);
-  const th=filtered.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0),fd=filtered.filter(e=>e.food).length;
-  exportXLS([h,...r,[t("totalLbl"),"","","","",th+" "+t("hoursU"),fd+" "+t("foodU"),filtered.length+" "+t("workU")]],t("allEmp"),"Overtime_"+p.label);
+
+  // Build Excel grouped by worker — worker name as section header row, no worker/role columns
+  const wb=XLSX.utils.book_new();
+  const groups={},order=[];
+  filtered.forEach(e=>{
+    if(!groups[e.wk]){groups[e.wk]={name:e.wName,role:e.wRole,rows:[]};order.push(e.wk);}
+    groups[e.wk].rows.push(e);
+  });
+
+  const label=statusFilter==="pending"?t("sPendTitle"):statusFilter==="approved"?t("sApprTitle"):t("allEmp");
+  const data=[];
+  let grandH=0,grandF=0,grandD=0;
+  order.forEach(wk=>{
+    const g=groups[wk];
+    // Worker header
+    data.push([g.name+" — "+roleLabel(g.role)]);
+    // Column headers
+    data.push([t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")]);
+    // Rows
+    g.rows.forEach(e=>{
+      data.push([e.date,fmtTimeRange(e),e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stLabel(e.status)]);
+    });
+    const apH=g.rows.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
+    const fD=g.rows.filter(e=>e.food).length;
+    grandH+=apH; grandF+=fD; grandD+=g.rows.length;
+    data.push([t("totalLbl"),"","",apH+" "+t("hoursU"),fD+" "+t("foodU"),g.rows.length+" "+t("workU")]);
+    data.push([]); // spacer
+  });
+  if(order.length>1){
+    data.push([t("totalLbl")+" — "+t("allEmp"),"","",grandH+" "+t("hoursU"),grandF+" "+t("foodU"),grandD+" "+t("workU")]);
+  }
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"]=[{wch:14},{wch:22},{wch:14},{wch:12},{wch:12},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws,label.slice(0,31));
+  XLSX.writeFile(wb,label+"_"+p.label+".xlsx");
+  toast(t("toastExp"));
 }
 function exportRepExcel(){
   if(!reportData.length)return toast(t("toastNoData"));
-  const h=[t("thWorker"),t("thRole"),t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
-  const r=reportData.map(e=>[e.wName,roleLabel(e.wRole),e.date,e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stShort(e.status)]);
+  const h=[t("thWorker"),t("thRole"),t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
+  const r=reportData.map(e=>[e.wName,roleLabel(e.wRole),e.date,fmtTimeRange(e),e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stShort(e.status)]);
   const th=reportData.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0),fd=reportData.filter(e=>e.food).length;
   exportXLS([h,...r,[t("totalLbl"),"","","","",th+" "+t("hoursU"),fd+" "+t("foodU"),reportData.length+" "+t("workU")]],reportMeta.title,"Report_"+reportMeta.range);
 }
 function exportMyRepExcel(){
   const d=window._myRepData;if(!d||!d.data.length)return toast(t("toastNoData"));
-  const h=[t("thDate"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
+  const h=[t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
   const r=d.data.map(e=>[e.date,e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stLabel(e.status)]);
   exportXLS([h,...r,[t("totalLbl"),"","",d.totalH+" "+t("hoursU"),d.foodD+" "+t("foodU"),d.data.length+" "+t("workU")]],d.workerName,d.workerName+"_"+d.rangeLabel);
 }
