@@ -36,6 +36,7 @@ body.lang-en { direction: ltr; }
 .worker-section-header p { font-size: 10pt; color: #444; margin: 3px 0 0; }
 
 /* LANG BAR */
+input[list] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'%3E%3Cpath fill='%23aaa' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: left 10px center; }
 .lang-bar { background: #1a1a1a; padding: 7px 1.5rem; display: flex; align-items: center; gap: 6px; justify-content: center; }
 .lang-bar-label { color: rgba(255,255,255,0.4); font-size: 12px; }
 .lang-btn { background: transparent; border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.65); border-radius: 20px; padding: 4px 16px; font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.2s; }
@@ -265,7 +266,7 @@ body.lang-en .modal-actions { justify-content: flex-start; }
       <input type="password" id="workerPass" />
     </div>
     <button class="btn-primary" onclick="doLogin()" id="btnLogin">دخول</button>
-    <p class="hint" id="lHint">موظفون: رمز 1234 — مشرف: admin123</p>
+    <p class="hint" id="lHint">موظفون: رمز 1234 — مشرف: 1126</p>
   </div>
 </div>
 
@@ -315,8 +316,9 @@ body.lang-en .modal-actions { justify-content: flex-start; }
         <div class="add-entry-card no-print">
           <div class="add-entry-title" id="addTitle">إضافة ساعات إضافية</div>
           <div class="form-row">
-            <div class="field-group" style="margin:0;"><label class="field-label" id="lDate">التاريخ (اليوم تلقائياً)</label>
-              <div class="date-locked"><span style="font-size:16px;">📅</span><span class="date-locked-text" id="todayTxt">—</span><span class="date-locked-badge" id="todayBadge">اليوم</span></div>
+            <div class="field-group" style="margin:0;">
+              <label class="field-label" id="lDate">التاريخ</label>
+              <select id="entryDate" style="direction:rtl;"></select>
             </div>
             <div class="field-group" style="margin:0;"><label class="field-label" id="lHours">عدد الساعات</label>
               <div style="display:flex;align-items:center;gap:8px;">
@@ -339,7 +341,10 @@ body.lang-en .modal-actions { justify-content: flex-start; }
           <!-- hours preview -->
           <div id="hoursPreview" style="display:none;background:#E6F1FB;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:13px;color:#185FA5;font-weight:600;"></div>
           <div class="form-row">
-            <div class="field-group" style="margin:0;"><label class="field-label" id="lProject">اسم المشروع</label><input type="text" id="entryProject"/></div>
+            <div class="field-group" style="margin:0;"><label class="field-label" id="lProject">اسم المشروع</label>
+              <input type="text" id="entryProject" list="projectsList" autocomplete="off"/>
+              <datalist id="projectsList"></datalist>
+            </div>
             <div class="field-group" style="margin:0;"><label class="field-label" id="lCity">المدينة</label><select id="entryCity"></select></div>
           </div>
           <div class="checkbox-group"><input type="checkbox" id="entryFood"/><label for="entryFood" id="lFood">يوجد بدل طعام لهذا اليوم</label></div>
@@ -527,7 +532,9 @@ body.lang-en .modal-actions { justify-content: flex-start; }
     </div>
     <div id="editHoursPreview" style="display:none;background:#E6F1FB;border-radius:8px;padding:6px 12px;margin-bottom:8px;font-size:12px;color:#185FA5;font-weight:600;"></div>
     <div class="modal-grid">
-      <div class="field-group" style="margin:0;"><label class="field-label" id="eLProj">المشروع</label><input type="text" id="editProject"/></div>
+      <div class="field-group" style="margin:0;"><label class="field-label" id="eLProj">المشروع</label>
+        <input type="text" id="editProject" list="projectsList" autocomplete="off"/>
+      </div>
       <div class="field-group" style="margin:0;"><label class="field-label" id="eLCity">المدينة</label><select id="editCity"></select></div>
     </div>
     <div class="modal-grid">
@@ -577,14 +584,14 @@ const TR = {
     tabW:"موظف", tabS:"مشرف",
     lSelectW:"اختر اسمك", lSPass:"كلمة المرور", lPin:"رمز الدخول",
     wPassPH:"أدخل رمز الدخول", sPassPH:"أدخل كلمة المرور",
-    btnLogin:"دخول", lHint:"موظفون: رمز 1234 — مشرف: admin123",
+    btnLogin:"دخول", lHint:"موظفون: رمز 1234 — مشرف: 1126",
     navTitle:"هركو — الساعات الإضافية", btnLogout:"خروج",
     pLabel:"الفترة الحالية", btnPrev:"◀ السابقة", btnNext:"التالية ▶",
     ws1l:"إجمالي الساعات", ws1s:"هذه الفترة",
     ws2l:"ساعات معتمدة", ws2s:"موافق عليها",
     ws3l:"أيام بدل طعام", ws3s:"هذه الفترة",
     addTitle:"إضافة ساعات إضافية",
-    lDate:"التاريخ (اليوم تلقائياً)", todayBadge:"اليوم",
+    lDate:"التاريخ", todayBadge:"اليوم",
     lHours:"عدد الساعات", hoursPH:"مثال: 3",
     lProject:"اسم المشروع", projectPH:"مثال: مشروع الرياض A",
     lCity:"المدينة", cityPH:"اختر المدينة",
@@ -653,13 +660,13 @@ const TR = {
     tabW:"Employee", tabS:"Supervisor",
     lSelectW:"Select your name", lSPass:"Password", lPin:"PIN Code",
     wPassPH:"Enter PIN", sPassPH:"Enter password",
-    btnLogin:"Login", lHint:"Employees: PIN 1234 — Supervisor: admin123",
+    btnLogin:"Login", lHint:"Employees: PIN 1234 — Supervisor: 1126",
     navTitle:"HRCO — Overtime System", btnLogout:"Logout",
     pLabel:"Current Period", btnPrev:"◀ Previous", btnNext:"Next ▶",
     ws1l:"Total Hours", ws1s:"This period", ws2l:"Approved Hours", ws2s:"Approved",
     ws3l:"Food Allowance Days", ws3s:"This period",
     addTitle:"Add Overtime Entry",
-    lDate:"Date (auto today)", todayBadge:"Today",
+    lDate:"Date", todayBadge:"Today",
     lHours:"Hours", hoursPH:"e.g. 3",
     lProject:"Project Name", projectPH:"e.g. Riyadh Project A",
     lCity:"City", cityPH:"Select city",
@@ -725,13 +732,13 @@ const TR = {
     tabW:"ملازم", tabS:"سپروائزر",
     lSelectW:"اپنا نام منتخب کریں", lSPass:"پاس ورڈ", lPin:"پن کوڈ",
     wPassPH:"پن کوڈ درج کریں", sPassPH:"پاس ورڈ درج کریں",
-    btnLogin:"داخل ہوں", lHint:"ملازمین: پن 1234 — سپروائزر: admin123",
+    btnLogin:"داخل ہوں", lHint:"ملازمین: پن 1234 — سپروائزر: 1126",
     navTitle:"HRCO — اوور ٹائم", btnLogout:"لاگ آؤٹ",
     pLabel:"موجودہ مدت", btnPrev:"◀ پچھلا", btnNext:"اگلا ▶",
     ws1l:"کل گھنٹے", ws1s:"اس مدت میں", ws2l:"منظور شدہ", ws2s:"منظور",
     ws3l:"کھانے کے دن", ws3s:"اس مدت میں",
     addTitle:"اوور ٹائم اندراج",
-    lDate:"تاریخ (آج خودکار)", todayBadge:"آج",
+    lDate:"تاریخ", todayBadge:"آج",
     lHours:"گھنٹے", hoursPH:"مثلاً: 3",
     lProject:"پروجیکٹ", projectPH:"مثلاً: ریاض پروجیکٹ",
     lCity:"شہر", cityPH:"شہر منتخب کریں",
@@ -876,6 +883,7 @@ async function loadAll(){
       });
     });
     dbReady = true;
+    buildProjectsList();
     showLoading(false);
     return true;
   } catch(err){
@@ -1038,6 +1046,7 @@ function setLang(l){
   document.documentElement.dir=TR[l].dir;
   ["ar","en","ur"].forEach(x=>document.getElementById("lb-"+x).classList.toggle("active",x===l));
   applyTR();buildWorkerSel();buildCitySel("entryCity");buildCitySel("editCity");
+  if(currentRole==="worker") buildDateSelect();
   refreshPeriod();
   if(currentRole==="worker")renderWT();
   else if(currentRole==="supervisor"){renderSO();renderMW();buildSOWorkers();buildReportWorkers();updateReportDateUI();}
@@ -1051,7 +1060,7 @@ function applyTR(){
     wPLabel:"pLabel",sPLabel:"pLabel",
     btnPW:"btnPrev",btnNW:"btnNext",btnPS:"btnPrev",btnNS:"btnNext",
     ws1l:"ws1l",ws1s:"ws1s",ws2l:"ws2l",ws2s:"ws2s",ws3l:"ws3l",ws3s:"ws3s",
-    addTitle:"addTitle",lDate:"lDate",todayBadge:"todayBadge",
+    addTitle:"addTitle",lDate:"lDate",
     lHours:"lHours",lProject:"lProject",lCity:"lCity",lFood:"lFood",
     btnAddE:"btnAddE",wTableT:"wTableT",emptyW:"emptyMsg",
     sTab1:"sTab1",sTab2:"sTab2",sTab3:"sTab3",
@@ -1077,7 +1086,7 @@ function applyTR(){
   Object.entries(map).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=t(key)||"";});
   const ph={workerPass:"wPassPH",supervisorPass:"sPassPH",entryHours:"hoursPH",entryProject:"projectPH",newWName:"newNamePH",newWPin:"newPinPH"};
   Object.entries(ph).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.placeholder=t(key);});
-  document.getElementById("todayTxt").textContent=getTodayDisplay();
+  buildDateSelect();
   refreshPeriod();
 }
 
@@ -1103,7 +1112,7 @@ function doLogin(){
     document.getElementById("userBadge").className="nav-badge "+roleBadgeClass(workers[w].role);
     showApp("worker");
   }else{
-    if(document.getElementById("supervisorPass").value!=="admin123")return toast(t("errPass"));
+    if(document.getElementById("supervisorPass").value!=="1126")return toast(t("errPass"));
     currentUser="supervisor";currentRole="supervisor";
     document.getElementById("userName").textContent=lang==="en"?"Supervisor":lang==="ur"?"سپروائزر":"المشرف العام";
     document.getElementById("userBadge").textContent=roleLabel("supervisor");
@@ -1121,6 +1130,7 @@ async function showApp(role){
   showLoading(true);
   await loadAll();
   buildWorkerSel();
+  if(role==="worker") buildDateSelect();
   showLoading(false);
   refreshPeriod();
   if(role==="worker")renderWT();
@@ -1153,8 +1163,46 @@ function showSupTab(tab){
 // WORKER TABLE
 // ================================================================
 // ================================================================
-// TIME PICKER — auto-calculate hours from/to
+// DATE SELECT — last 3 days (today + 2 previous)
 // ================================================================
+function buildDateSelect(){
+  const sel=document.getElementById("entryDate");
+  if(!sel)return;
+  sel.innerHTML="";
+  const days=t("days");
+  const months=t("months");
+  for(let i=0;i<=2;i++){
+    const d=new Date();
+    d.setDate(d.getDate()-i);
+    const yyyy=d.getFullYear();
+    const mm=String(d.getMonth()+1).padStart(2,"0");
+    const dd=String(d.getDate()).padStart(2,"0");
+    const val=yyyy+"/"+mm+"/"+dd;
+    const label=(i===0?(lang==="en"?"Today ":lang==="ur"?"آج ":"اليوم — "):
+                  i===1?(lang==="en"?"Yesterday ":lang==="ur"?"کل ":"أمس — "):
+                  (lang==="en"?"2 days ago ":lang==="ur"?"2 دن پہلے ":"قبل يومين — "))+
+               days[d.getDay()]+" "+d.getDate()+" "+months[d.getMonth()]+" "+yyyy;
+    const opt=document.createElement("option");
+    opt.value=val; opt.textContent=label;
+    if(i===0)opt.selected=true;
+    sel.appendChild(opt);
+  }
+}
+
+
+function buildProjectsList(){
+  const dl=document.getElementById("projectsList");
+  if(!dl)return;
+  const names=new Set();
+  Object.values(entries).forEach(periods=>{
+    Object.values(periods).forEach(list=>{
+      list.forEach(e=>{ if(e.project&&e.project.trim()) names.add(e.project.trim()); });
+    });
+  });
+  dl.innerHTML=[...names].sort().map(n=>`<option value="${n}">`).join("");
+}
+
+
 function calcHoursFromTime(){
   const fromEl=document.getElementById("entryFrom");
   const toEl=document.getElementById("entryTo");
@@ -1198,13 +1246,15 @@ async function addEntry(){
   const toT=document.getElementById("entryTo").value||"";
   if(!pr||!ci)return toast(t("errFill"));
   if(isNaN(h)||h<=0||h>24)return toast(t("errHours"));
-  const entry={date:getTodayStr(),hours:h,project:pr,city:ci,food:fo,status:"pending",id:Date.now(),
+  const date=document.getElementById("entryDate")?.value||getTodayStr();
+  const entry={date,hours:h,project:pr,city:ci,food:fo,status:"pending",id:Date.now(),
     timeFrom:fromT, timeTo:toT};
   showLoading(true);
   const ok = await dbAddEntry(currentUser, entry);
   if(!ok){ showLoading(false); return toast("❌ فشل الحفظ — حاول مرة أخرى"); }
   const p=getPeriod(periodOffset);
   getEnt(currentUser,p.key).push(entry);
+  buildProjectsList();
   showLoading(false);
   document.getElementById("entryHours").value="";
   document.getElementById("entryProject").value="";
@@ -1212,6 +1262,7 @@ async function addEntry(){
   document.getElementById("entryFood").checked=false;
   document.getElementById("entryFrom").value="";
   document.getElementById("entryTo").value="";
+  buildDateSelect(); // reset to today
   const prev=document.getElementById("hoursPreview");
   if(prev)prev.style.display="none";
   renderWT(); toast(t("toastAdded"));
@@ -1438,6 +1489,7 @@ async function confirmEdit(){
   if(!ok){ showLoading(false); return toast("❌ فشل الحفظ"); }
   const p=getPeriod(periodOffset),list=getEnt(editingE.wk,p.key),e=list.find(e=>String(e.id)===String(editingE.id));
   if(e){ e.date=nd.replace(/-/g,"/");e.hours=nh;e.project=np;e.city=nc;e.status=ns;e.food=nf;e.timeFrom=nFrom;e.timeTo=nTo; }
+  buildProjectsList();
   showLoading(false); closeEditModal(); renderSO(); toast(t("toastSaved"));
 }
 
