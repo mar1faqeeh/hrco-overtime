@@ -552,6 +552,31 @@ body.lang-en .modal-actions { justify-content: flex-start; }
   </div>
 </div>
 
+<!-- WORKER EDIT MODAL -->
+<div id="workerEditModal" style="display:none;" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title"><div class="modal-title-icon">✏️</div><span id="weModalT">تعديل السجل</span></div>
+    <div style="background:#FAEEDA;border-radius:8px;padding:8px 12px;font-size:12px;color:#854F0B;margin-bottom:12px;" id="weNote">
+      ⚠️ يمكنك التعديل خلال يومين فقط من تاريخ الإضافة
+    </div>
+    <div class="modal-grid">
+      <div class="field-group" style="margin:0;"><label class="field-label" id="weLFromTime">من الساعة</label><input type="time" id="weFrom" style="direction:ltr;" onchange="calcWEHours()"/></div>
+      <div class="field-group" style="margin:0;"><label class="field-label" id="weLToTime">إلى الساعة</label><input type="time" id="weTo" style="direction:ltr;" onchange="calcWEHours()"/></div>
+    </div>
+    <div id="weHoursPreview" style="display:none;background:#E6F1FB;border-radius:8px;padding:6px 12px;margin-bottom:8px;font-size:12px;color:#185FA5;font-weight:600;"></div>
+    <div class="modal-grid">
+      <div class="field-group" style="margin:0;"><label class="field-label" id="weLHours">عدد الساعات</label><input type="number" id="weHours" min="0.5" max="24" step="0.5" oninput="clearWETime()"/></div>
+      <div class="field-group" style="margin:0;display:flex;align-items:flex-end;">
+        <div class="checkbox-group" style="width:100%;"><input type="checkbox" id="weFood"/><label for="weFood" id="weLFood">بدل طعام</label></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeWorkerEditModal()" id="weCancelB">إلغاء</button>
+      <button class="modal-confirm" onclick="confirmWorkerEdit()" id="weConfirmB">حفظ</button>
+    </div>
+  </div>
+</div>
+
 <!-- DELETE MODAL -->
 <div id="deleteModal" style="display:none;" class="modal-overlay">
   <div class="modal-box">
@@ -616,6 +641,11 @@ const TR = {
     lFromTime:"من الساعة", lToTime:"إلى الساعة", lOrTime:"أو",
     eLFromTime:"من الساعة", eLToTime:"إلى الساعة",
     thTime:"الوقت (من/إلى)",
+    errEditLocked:"لا يمكن التعديل — السجل معتمد أو مضى عليه أكثر من يومين",
+    weModalT:"تعديل ساعاتي", weNote:"⚠️ يمكنك التعديل خلال يومين فقط من تاريخ الإضافة",
+    weLFromTime:"من الساعة", weLToTime:"إلى الساعة",
+    weLHours:"عدد الساعات", weLFood:"بدل طعام",
+    weCancelB:"إلغاء", weConfirmB:"حفظ التعديل",
     eModalT:"تعديل السجل",
     eLDate:"التاريخ", eLHours:"الساعات", eLProj:"المشروع", eLCity:"المدينة",
     eLStatus:"الحالة", eLFood:"بدل طعام",
@@ -688,6 +718,11 @@ const TR = {
     lFromTime:"From", lToTime:"To", lOrTime:"or",
     eLFromTime:"From", eLToTime:"To",
     thTime:"Time (From/To)",
+    errEditLocked:"Cannot edit — entry is approved or older than 2 days",
+    weModalT:"Edit My Entry", weNote:"⚠️ You can only edit within 2 days of adding",
+    weLFromTime:"From", weLToTime:"To",
+    weLHours:"Hours", weLFood:"Food Allowance",
+    weCancelB:"Cancel", weConfirmB:"Save Changes",
     eModalT:"Edit Record",
     eLDate:"Date", eLHours:"Hours", eLProj:"Project", eLCity:"City",
     eLStatus:"Status", eLFood:"Food Allowance",
@@ -760,6 +795,11 @@ const TR = {
     lFromTime:"شروع وقت", lToTime:"ختم وقت", lOrTime:"یا",
     eLFromTime:"شروع وقت", eLToTime:"ختم وقت",
     thTime:"وقت (شروع/ختم)",
+    errEditLocked:"ترمیم ممکن نہیں — منظور شدہ یا 2 دن سے پرانا",
+    weModalT:"اپنا ریکارڈ ترمیم کریں", weNote:"⚠️ صرف 2 دن کے اندر ترمیم ممکن ہے",
+    weLFromTime:"شروع وقت", weLToTime:"ختم وقت",
+    weLHours:"گھنٹے", weLFood:"کھانے کا الاؤنس",
+    weCancelB:"منسوخ", weConfirmB:"محفوظ کریں",
     eModalT:"ریکارڈ ترمیم",
     eLDate:"تاریخ", eLHours:"گھنٹے", eLProj:"پروجیکٹ", eLCity:"شہر",
     eLStatus:"حیثیت", eLFood:"کھانا",
@@ -1074,6 +1114,10 @@ function applyTR(){
     rW:"rW",rT:"rT",rS:"rS",
     lFromTime:"lFromTime",lToTime:"lToTime",lOrTime:"lOrTime",
     eLFromTime:"eLFromTime",eLToTime:"eLToTime",
+    weModalT:"weModalT", weNote:"weNote",
+    weLFromTime:"weLFromTime", weLToTime:"weLToTime",
+    weLHours:"weLHours", weLFood:"weLFood",
+    weCancelB:"weCancelB", weConfirmB:"weConfirmB",
     eModalT:"eModalT",eLDate:"eLDate",eLHours:"eLHours",eLProj:"eLProj",eLCity:"eLCity",
     eLStatus:"eLStatus",eLFood:"eLFood",eCancelB:"eCancelB",eConfirmB:"eConfirmB",
     eStP:"stPShort",eStA:"stApproved",eStR:"stRejected",
@@ -1271,6 +1315,16 @@ function fmtTimeRange(e){
   if(e.timeFrom&&e.timeTo) return formatTime12(e.timeFrom)+"–"+formatTime12(e.timeTo);
   return "—";
 }
+// Check if worker can still edit an entry (within 2 days, not approved)
+function canWorkerEdit(entry){
+  if(entry.status==="approved") return false; // approved = locked
+  const parts=entry.date.split("/");
+  const entryDate=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+  const now=new Date(); now.setHours(0,0,0,0);
+  const diffDays=Math.floor((now-entryDate)/(1000*60*60*24));
+  return diffDays<=2;
+}
+
 function renderWT(){
   const p=getPeriod(periodOffset),list=getEnt(currentUser,p.key);
   document.getElementById("wTotalH").textContent=list.reduce((s,e)=>s+e.hours,0);
@@ -1280,14 +1334,19 @@ function renderWT(){
   if(!list.length){body.innerHTML="<div class='empty-state'><div class='empty-icon'>📋</div>"+t("emptyMsg")+"</div>";return;}
   const totalH=list.reduce((s,e)=>s+e.hours,0),foodD=list.filter(e=>e.food).length;
   body.innerHTML=buildTable(
-    [t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")],
-    list.map(e=>[e.date,fmtTimeRange(e),e.project,cityLabel(e.city),e.hours,
+    [t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus"),t("thActions")],
+    list.map(e=>[
+      e.date, fmtTimeRange(e), e.project, cityLabel(e.city), e.hours,
       e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
-      "<span class='badge "+stClass(e.status)+"'>"+stLabel(e.status)+"</span>"]),
-    [t("totalLbl"),"","","",
+      "<span class='badge "+stClass(e.status)+"'>"+stLabel(e.status)+"</span>",
+      canWorkerEdit(e)
+        ? `<button class="bsa no-print" onclick="openWorkerEdit('${e.id}')">${t("btnEdit")}</button>`
+        : `<span style="font-size:11px;color:#ccc;">—</span>`
+    ]),
+    [t("totalLbl"),"","","","",
       "<span class='tp tp-b'>"+totalH+" "+t("hoursU")+"</span>",
       "<span class='tp tp-a'>"+foodD+" "+t("foodU")+"</span>",
-      "<span class='tp tp-g'>"+list.length+" "+t("workU")+"</span>"]
+      "<span class='tp tp-g'>"+list.length+" "+t("workU")+"</span>",""]
   );
 }
 
@@ -1437,6 +1496,59 @@ function buildTable(headers,rows,totals){
   const r=rows.map(row=>"<tr>"+row.map(c=>"<td>"+c+"</td>").join("")+"</tr>").join("");
   const tot="<tr class='totals-row'>"+totals.map(c=>"<td>"+c+"</td>").join("")+"</tr>";
   return`<div class="tbl-wrap"><table><thead><tr>${h}</tr></thead><tbody>${r}${tot}</tbody></table></div>`;
+}
+
+// ================================================================
+// WORKER SELF-EDIT (within 2 days, pending only)
+// ================================================================
+let editingWE=null;
+function openWorkerEdit(id){
+  const p=getPeriod(periodOffset),list=getEnt(currentUser,p.key);
+  const e=list.find(e=>String(e.id)===String(id));
+  if(!e||!canWorkerEdit(e))return toast(t("errEditLocked"));
+  editingWE=id;
+  document.getElementById("weHours").value=e.hours;
+  document.getElementById("weFrom").value=e.timeFrom||"";
+  document.getElementById("weTo").value=e.timeTo||"";
+  document.getElementById("weFood").checked=e.food;
+  const prev=document.getElementById("weHoursPreview");
+  if(e.timeFrom&&e.timeTo){prev.style.display="block";prev.textContent="⏱ "+formatTime12(e.timeFrom)+" → "+formatTime12(e.timeTo)+" = "+e.hours+" "+t("hoursU");}
+  else prev.style.display="none";
+  document.getElementById("workerEditModal").style.display="flex";
+}
+function closeWorkerEditModal(){document.getElementById("workerEditModal").style.display="none";editingWE=null;}
+function calcWEHours(){
+  const f=document.getElementById("weFrom"),tt=document.getElementById("weTo");
+  const hEl=document.getElementById("weHours"),prev=document.getElementById("weHoursPreview");
+  if(!f.value||!tt.value){prev.style.display="none";return;}
+  const [fh,fm]=f.value.split(":").map(Number);
+  const [th,tm]=tt.value.split(":").map(Number);
+  let mins=(th*60+tm)-(fh*60+fm);if(mins<=0)mins+=24*60;
+  const hrs=Math.round(mins/60*10)/10;
+  hEl.value=hrs;
+  prev.style.display="block";
+  prev.textContent="⏱ "+formatTime12(f.value)+" → "+formatTime12(tt.value)+" = "+hrs+" "+t("hoursU");
+}
+function clearWETime(){
+  document.getElementById("weFrom").value="";
+  document.getElementById("weTo").value="";
+  document.getElementById("weHoursPreview").style.display="none";
+}
+async function confirmWorkerEdit(){
+  if(!editingWE)return;
+  const p=getPeriod(periodOffset),list=getEnt(currentUser,p.key);
+  const e=list.find(e=>String(e.id)===String(editingWE));
+  if(!e||!canWorkerEdit(e)){closeWorkerEditModal();return toast(t("errEditLocked"));}
+  const nh=parseFloat(document.getElementById("weHours").value);
+  const nf=document.getElementById("weFood").checked;
+  const nFrom=document.getElementById("weFrom").value||"";
+  const nTo=document.getElementById("weTo").value||"";
+  if(isNaN(nh)||nh<=0||nh>24)return toast(t("errHours"));
+  showLoading(true);
+  const ok=await dbUpdateEntry(editingWE,{hours:nh,food:nf,time_from:nFrom,time_to:nTo});
+  if(!ok){showLoading(false);return toast("❌ فشل الحفظ");}
+  e.hours=nh;e.food=nf;e.timeFrom=nFrom;e.timeTo=nTo;
+  showLoading(false);closeWorkerEditModal();renderWT();toast(t("toastSaved"));
 }
 
 function calcEditHours(){
