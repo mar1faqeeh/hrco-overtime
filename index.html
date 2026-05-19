@@ -36,6 +36,8 @@ body.lang-en { direction: ltr; }
 .worker-section-header p { font-size: 10pt; color: #444; margin: 3px 0 0; }
 
 /* LANG BAR */
+.bsdel { background: #FCEBEB; color: #A32D2D; border: none; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.bsdel:hover { background: #F7C1C1; }
 input[list] { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'%3E%3Cpath fill='%23aaa' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: left 10px center; }
 .lang-bar { background: #1a1a1a; padding: 7px 1.5rem; display: flex; align-items: center; gap: 6px; justify-content: center; }
 .lang-bar-label { color: rgba(255,255,255,0.4); font-size: 12px; }
@@ -582,6 +584,18 @@ body.lang-en .modal-actions { justify-content: flex-start; }
   </div>
 </div>
 
+<!-- DELETE ENTRY MODAL -->
+<div id="deleteEntryModal" style="display:none;" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title"><div class="modal-title-icon">🗑️</div><span id="deModalTitle">حذف السجل</span></div>
+    <p style="font-size:14px;color:#666;line-height:1.7;" id="deConfirmTxt"></p>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeDeleteEntry()" id="deCancelB">إلغاء</button>
+      <button class="modal-confirm danger" onclick="confirmDeleteEntry()" id="deConfirmB">حذف</button>
+    </div>
+  </div>
+</div>
+
 <!-- DELETE MODAL -->
 <div id="deleteModal" style="display:none;" class="modal-overlay">
   <div class="modal-box">
@@ -664,6 +678,10 @@ const TR = {
     btnEdit:"تعديل", btnApprove:"اعتماد", btnReject:"رفض", btnDelete:"حذف",
     totalLbl:"الإجمالي", hoursU:"ساعة", foodU:"يوم طعام", workU:"يوم عمل",
     allEmp:"جميع الموظفين", recOf:"سجل", pendOf:"بانتظار",
+    toastEntryDeleted:"تم حذف السجل ✓",
+    deModalTitle:"حذف السجل",
+    deConfirmMsg:"هل أنت متأكد من حذف هذا السجل؟",
+    deCancelB:"إلغاء", deConfirmB:"حذف",
     toastAdded:"تم إضافة السجل ✓", toastAppr:"تم اعتماد الساعات ✓",
     toastRej:"تم رفض السجل", toastSaved:"تم حفظ التعديلات ✓",
     toastWAdded:"تم إضافة الموظف ✓", toastWDel:"تم حذف الموظف",
@@ -742,6 +760,10 @@ const TR = {
     btnEdit:"Edit", btnApprove:"Approve", btnReject:"Reject", btnDelete:"Delete",
     totalLbl:"Total", hoursU:"hrs", foodU:"food days", workU:"work days",
     allEmp:"All Employees", recOf:"records", pendOf:"pending",
+    toastEntryDeleted:"Entry deleted ✓",
+    deModalTitle:"Delete Entry",
+    deConfirmMsg:"Are you sure you want to delete this entry?",
+    deCancelB:"Cancel", deConfirmB:"Delete",
     toastAdded:"Entry added ✓", toastAppr:"Hours approved ✓",
     toastRej:"Entry rejected", toastSaved:"Changes saved ✓",
     toastWAdded:"Employee added ✓", toastWDel:"Employee deleted",
@@ -820,6 +842,10 @@ const TR = {
     btnEdit:"ترمیم", btnApprove:"منظور", btnReject:"مسترد", btnDelete:"حذف",
     totalLbl:"کل", hoursU:"گھنٹے", foodU:"کھانے کے دن", workU:"کام کے دن",
     allEmp:"تمام ملازمین", recOf:"ریکارڈ", pendOf:"انتظار",
+    toastEntryDeleted:"ریکارڈ حذف ✓",
+    deModalTitle:"ریکارڈ حذف کریں",
+    deConfirmMsg:"کیا آپ واقعی یہ ریکارڈ حذف کرنا چاہتے ہیں؟",
+    deCancelB:"منسوخ", deConfirmB:"حذف",
     toastAdded:"ریکارڈ شامل ✓", toastAppr:"منظور ✓",
     toastRej:"مسترد", toastSaved:"محفوظ ✓",
     toastWAdded:"ملازم شامل ✓", toastWDel:"ملازم حذف",
@@ -996,6 +1022,14 @@ async function dbUpdateEntry(entryId, fields){
 }
 
 // ================================================================
+// DB — DELETE ENTRY
+// ================================================================
+async function dbDeleteEntry(entryId){
+  const res = await sb.from("overtime_entries").delete("id=eq." + entryId);
+  return res.ok;
+}
+
+// ================================================================
 // DB — ADD WORKER
 // ================================================================
 async function dbAddWorker(id, worker){
@@ -1130,6 +1164,7 @@ function applyTR(){
     eModalT:"eModalT",eLDate:"eLDate",eLHours:"eLHours",eLProj:"eLProj",eLCity:"eLCity",
     eLStatus:"eLStatus",eLFood:"eLFood",eCancelB:"eCancelB",eConfirmB:"eConfirmB",
     eStP:"stPShort",eStA:"stApproved",eStR:"stRejected",
+    deModalTitle:"deModalTitle", deCancelB:"deCancelB", deConfirmB:"deConfirmB",
     dModalT:"dModalT",dCancelB:"dCancelB",dConfirmB:"dConfirmB",
     rTitle:"rTitle",rTypeLabel:"rTypeLabel",
     rdaily:"rdaily",rweekly:"rweekly",rmonthly:"rmonthly",ryearly:"ryearly",rcustom:"rcustom",
@@ -1464,6 +1499,7 @@ function buildGroupedTable(entries, showActions){
         <button class="bsa" onclick="openEdit('${e.wk}','${e.id}')">${t("btnEdit")}</button>
         ${e.status!=="approved"?`<button class="bsg" onclick="chStatus('${e.wk}','${e.id}','approved')">${t("btnApprove")}</button>`:""}
         ${e.status!=="rejected"?`<button class="bsr" onclick="chStatus('${e.wk}','${e.id}','rejected')">${t("btnReject")}</button>`:""}
+        <button class="bsdel" onclick="openDeleteEntry('${e.wk}','${e.id}')">🗑</button>
       </div>`);
       return r;
     });
@@ -1505,6 +1541,32 @@ function buildTable(headers,rows,totals){
   const r=rows.map(row=>"<tr>"+row.map(c=>"<td>"+c+"</td>").join("")+"</tr>").join("");
   const tot="<tr class='totals-row'>"+totals.map(c=>"<td>"+c+"</td>").join("")+"</tr>";
   return`<div class="tbl-wrap"><table><thead><tr>${h}</tr></thead><tbody>${r}${tot}</tbody></table></div>`;
+}
+
+// ================================================================
+// DELETE ENTRY (supervisor only)
+// ================================================================
+let deletingEntry=null;
+function openDeleteEntry(wk,id){
+  const p=getPeriod(periodOffset),list=getEnt(wk,p.key);
+  const e=list.find(e=>String(e.id)===String(id));
+  if(!e)return;
+  deletingEntry={wk,id};
+  document.getElementById("deConfirmTxt").innerHTML=
+    `${t("deConfirmMsg")}<br><strong>${workers[wk].name}</strong> — ${e.date} — ${e.project} — ${e.hours} ${t("hoursU")}`;
+  document.getElementById("deleteEntryModal").style.display="flex";
+}
+function closeDeleteEntry(){document.getElementById("deleteEntryModal").style.display="none";deletingEntry=null;}
+async function confirmDeleteEntry(){
+  if(!deletingEntry)return;
+  showLoading(true);
+  const ok=await dbDeleteEntry(deletingEntry.id);
+  if(!ok){showLoading(false);return toast("❌ فشل الحذف");}
+  // Remove from local state
+  const p=getPeriod(periodOffset),list=getEnt(deletingEntry.wk,p.key);
+  const idx=list.findIndex(e=>String(e.id)===String(deletingEntry.id));
+  if(idx>-1) list.splice(idx,1);
+  showLoading(false);closeDeleteEntry();renderSO();toast(t("toastEntryDeleted"));
 }
 
 // ================================================================
