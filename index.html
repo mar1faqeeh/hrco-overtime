@@ -560,19 +560,24 @@ body.lang-en .modal-actions { justify-content: flex-start; }
       ⚠️ يمكنك التعديل خلال يومين فقط من تاريخ الإضافة
     </div>
     <div class="modal-grid">
+      <div class="field-group" style="margin:0;"><label class="field-label" id="weLDate">التاريخ</label><select id="weDate" style="direction:rtl;"></select></div>
+      <div class="field-group" style="margin:0;"><label class="field-label" id="weLHours">عدد الساعات</label><input type="number" id="weHours" min="0.5" max="24" step="0.5" oninput="clearWETime()"/></div>
+    </div>
+    <div class="modal-grid">
       <div class="field-group" style="margin:0;"><label class="field-label" id="weLFromTime">من الساعة</label><input type="time" id="weFrom" style="direction:ltr;" onchange="calcWEHours()"/></div>
       <div class="field-group" style="margin:0;"><label class="field-label" id="weLToTime">إلى الساعة</label><input type="time" id="weTo" style="direction:ltr;" onchange="calcWEHours()"/></div>
     </div>
     <div id="weHoursPreview" style="display:none;background:#E6F1FB;border-radius:8px;padding:6px 12px;margin-bottom:8px;font-size:12px;color:#185FA5;font-weight:600;"></div>
     <div class="modal-grid">
-      <div class="field-group" style="margin:0;"><label class="field-label" id="weLHours">عدد الساعات</label><input type="number" id="weHours" min="0.5" max="24" step="0.5" oninput="clearWETime()"/></div>
-      <div class="field-group" style="margin:0;display:flex;align-items:flex-end;">
-        <div class="checkbox-group" style="width:100%;"><input type="checkbox" id="weFood"/><label for="weFood" id="weLFood">بدل طعام</label></div>
-      </div>
+      <div class="field-group" style="margin:0;"><label class="field-label" id="weLProject">اسم المشروع</label><input type="text" id="weProject" list="projectsList" autocomplete="off"/></div>
+      <div class="field-group" style="margin:0;"><label class="field-label" id="weLCity">المدينة</label><select id="weCity"></select></div>
+    </div>
+    <div class="field-group" style="margin-bottom:0;">
+      <div class="checkbox-group"><input type="checkbox" id="weFood"/><label for="weFood" id="weLFood">بدل طعام</label></div>
     </div>
     <div class="modal-actions">
       <button class="modal-cancel" onclick="closeWorkerEditModal()" id="weCancelB">إلغاء</button>
-      <button class="modal-confirm" onclick="confirmWorkerEdit()" id="weConfirmB">حفظ</button>
+      <button class="modal-confirm" onclick="confirmWorkerEdit()" id="weConfirmB">حفظ التعديل</button>
     </div>
   </div>
 </div>
@@ -642,10 +647,11 @@ const TR = {
     eLFromTime:"من الساعة", eLToTime:"إلى الساعة",
     thTime:"الوقت (من/إلى)",
     errEditLocked:"لا يمكن التعديل — السجل معتمد أو مضى عليه أكثر من يومين",
-    weModalT:"تعديل ساعاتي", weNote:"⚠️ يمكنك التعديل خلال يومين فقط من تاريخ الإضافة",
+    weModalT:"تعديل السجل", weNote:"⚠️ يمكنك التعديل خلال يومين فقط من تاريخ الإضافة",
+    weLDate:"التاريخ", weLHours:"عدد الساعات",
     weLFromTime:"من الساعة", weLToTime:"إلى الساعة",
-    weLHours:"عدد الساعات", weLFood:"بدل طعام",
-    weCancelB:"إلغاء", weConfirmB:"حفظ التعديل",
+    weLProject:"اسم المشروع", weLCity:"المدينة",
+    weLFood:"بدل طعام", weCancelB:"إلغاء", weConfirmB:"حفظ التعديل",
     eModalT:"تعديل السجل",
     eLDate:"التاريخ", eLHours:"الساعات", eLProj:"المشروع", eLCity:"المدينة",
     eLStatus:"الحالة", eLFood:"بدل طعام",
@@ -720,9 +726,10 @@ const TR = {
     thTime:"Time (From/To)",
     errEditLocked:"Cannot edit — entry is approved or older than 2 days",
     weModalT:"Edit My Entry", weNote:"⚠️ You can only edit within 2 days of adding",
+    weLDate:"Date", weLHours:"Hours",
     weLFromTime:"From", weLToTime:"To",
-    weLHours:"Hours", weLFood:"Food Allowance",
-    weCancelB:"Cancel", weConfirmB:"Save Changes",
+    weLProject:"Project Name", weLCity:"City",
+    weLFood:"Food Allowance", weCancelB:"Cancel", weConfirmB:"Save Changes",
     eModalT:"Edit Record",
     eLDate:"Date", eLHours:"Hours", eLProj:"Project", eLCity:"City",
     eLStatus:"Status", eLFood:"Food Allowance",
@@ -797,9 +804,10 @@ const TR = {
     thTime:"وقت (شروع/ختم)",
     errEditLocked:"ترمیم ممکن نہیں — منظور شدہ یا 2 دن سے پرانا",
     weModalT:"اپنا ریکارڈ ترمیم کریں", weNote:"⚠️ صرف 2 دن کے اندر ترمیم ممکن ہے",
+    weLDate:"تاریخ", weLHours:"گھنٹے",
     weLFromTime:"شروع وقت", weLToTime:"ختم وقت",
-    weLHours:"گھنٹے", weLFood:"کھانے کا الاؤنس",
-    weCancelB:"منسوخ", weConfirmB:"محفوظ کریں",
+    weLProject:"پروجیکٹ کا نام", weLCity:"شہر",
+    weLFood:"کھانے کا الاؤنس", weCancelB:"منسوخ", weConfirmB:"محفوظ کریں",
     eModalT:"ریکارڈ ترمیم",
     eLDate:"تاریخ", eLHours:"گھنٹے", eLProj:"پروجیکٹ", eLCity:"شہر",
     eLStatus:"حیثیت", eLFood:"کھانا",
@@ -1085,7 +1093,7 @@ function setLang(l){
   document.documentElement.lang=l;
   document.documentElement.dir=TR[l].dir;
   ["ar","en","ur"].forEach(x=>document.getElementById("lb-"+x).classList.toggle("active",x===l));
-  applyTR();buildWorkerSel();buildCitySel("entryCity");buildCitySel("editCity");
+  applyTR();buildWorkerSel();buildCitySel("entryCity");buildCitySel("editCity");buildCitySel("weCity");
   if(currentRole==="worker") buildDateSelect();
   refreshPeriod();
   if(currentRole==="worker")renderWT();
@@ -1115,9 +1123,10 @@ function applyTR(){
     lFromTime:"lFromTime",lToTime:"lToTime",lOrTime:"lOrTime",
     eLFromTime:"eLFromTime",eLToTime:"eLToTime",
     weModalT:"weModalT", weNote:"weNote",
+    weLDate:"weLDate", weLHours:"weLHours",
     weLFromTime:"weLFromTime", weLToTime:"weLToTime",
-    weLHours:"weLHours", weLFood:"weLFood",
-    weCancelB:"weCancelB", weConfirmB:"weConfirmB",
+    weLProject:"weLProject", weLCity:"weLCity",
+    weLFood:"weLFood", weCancelB:"weCancelB", weConfirmB:"weConfirmB",
     eModalT:"eModalT",eLDate:"eLDate",eLHours:"eLHours",eLProj:"eLProj",eLCity:"eLCity",
     eLStatus:"eLStatus",eLFood:"eLFood",eCancelB:"eCancelB",eConfirmB:"eConfirmB",
     eStP:"stPShort",eStA:"stApproved",eStR:"stRejected",
@@ -1507,15 +1516,45 @@ function openWorkerEdit(id){
   const e=list.find(e=>String(e.id)===String(id));
   if(!e||!canWorkerEdit(e))return toast(t("errEditLocked"));
   editingWE=id;
+  // Build date dropdown (last 3 days)
+  buildWEDateSelect(e.date);
+  // Build city select
+  buildCitySel("weCity");
+  document.getElementById("weCity").value=cityKey(e.city);
+  // Fill other fields
   document.getElementById("weHours").value=e.hours;
   document.getElementById("weFrom").value=e.timeFrom||"";
   document.getElementById("weTo").value=e.timeTo||"";
+  document.getElementById("weProject").value=e.project;
   document.getElementById("weFood").checked=e.food;
   const prev=document.getElementById("weHoursPreview");
-  if(e.timeFrom&&e.timeTo){prev.style.display="block";prev.textContent="⏱ "+formatTime12(e.timeFrom)+" → "+formatTime12(e.timeTo)+" = "+e.hours+" "+t("hoursU");}
-  else prev.style.display="none";
+  if(e.timeFrom&&e.timeTo){
+    prev.style.display="block";
+    prev.textContent="⏱ "+formatTime12(e.timeFrom)+" → "+formatTime12(e.timeTo)+" = "+e.hours+" "+t("hoursU");
+  } else prev.style.display="none";
   document.getElementById("workerEditModal").style.display="flex";
 }
+function buildWEDateSelect(currentDate){
+  const sel=document.getElementById("weDate"); if(!sel)return;
+  sel.innerHTML="";
+  const days=t("days"), months=t("months");
+  for(let i=0;i<=2;i++){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const yyyy=d.getFullYear();
+    const mm=String(d.getMonth()+1).padStart(2,"0");
+    const dd=String(d.getDate()).padStart(2,"0");
+    const val=yyyy+"/"+mm+"/"+dd;
+    const label=(i===0?(lang==="en"?"Today ":lang==="ur"?"آج ":"اليوم — "):
+                  i===1?(lang==="en"?"Yesterday ":lang==="ur"?"کل ":"أمس — "):
+                  (lang==="en"?"2 days ago ":lang==="ur"?"2 دن پہلے ":"قبل يومين — "))+
+               days[d.getDay()]+" "+d.getDate()+" "+months[d.getMonth()]+" "+yyyy;
+    const opt=document.createElement("option");
+    opt.value=val; opt.textContent=label;
+    if(val===currentDate) opt.selected=true;
+    sel.appendChild(opt);
+  }
+}
+
 function closeWorkerEditModal(){document.getElementById("workerEditModal").style.display="none";editingWE=null;}
 function calcWEHours(){
   const f=document.getElementById("weFrom"),tt=document.getElementById("weTo");
@@ -1543,11 +1582,22 @@ async function confirmWorkerEdit(){
   const nf=document.getElementById("weFood").checked;
   const nFrom=document.getElementById("weFrom").value||"";
   const nTo=document.getElementById("weTo").value||"";
+  const nDate=document.getElementById("weDate").value||e.date;
+  const nProject=document.getElementById("weProject").value.trim();
+  const nCity=document.getElementById("weCity").value;
   if(isNaN(nh)||nh<=0||nh>24)return toast(t("errHours"));
+  if(!nProject||!nCity)return toast(t("errFill"));
   showLoading(true);
-  const ok=await dbUpdateEntry(editingWE,{hours:nh,food:nf,time_from:nFrom,time_to:nTo});
+  const ok=await dbUpdateEntry(editingWE,{
+    date:nDate, hours:nh, food:nf,
+    time_from:nFrom, time_to:nTo,
+    project:nProject, city:nCity
+  });
   if(!ok){showLoading(false);return toast("❌ فشل الحفظ");}
-  e.hours=nh;e.food=nf;e.timeFrom=nFrom;e.timeTo=nTo;
+  e.date=nDate; e.hours=nh; e.food=nf;
+  e.timeFrom=nFrom; e.timeTo=nTo;
+  e.project=nProject; e.city=nCity;
+  buildProjectsList();
   showLoading(false);closeWorkerEditModal();renderWT();toast(t("toastSaved"));
 }
 
