@@ -350,10 +350,6 @@ body.lang-en .modal-actions { justify-content: flex-start; }
             <div class="field-group" style="margin:0;"><label class="field-label" id="lCity">المدينة</label><select id="entryCity"></select></div>
           </div>
           <div class="checkbox-group"><input type="checkbox" id="entryFood"/><label for="entryFood" id="lFood">يوجد بدل طعام لهذا اليوم</label></div>
-          <div class="field-group" style="margin-top:10px;margin-bottom:0;">
-            <label class="field-label" id="lNotes">ملاحظات (اختياري)</label>
-            <input type="text" id="entryNotes" />
-          </div>
           <br><button class="btn-add" onclick="addEntry()" id="btnAddE">إضافة السجل</button>
         </div>
         <div class="card">
@@ -551,11 +547,6 @@ body.lang-en .modal-actions { justify-content: flex-start; }
         <div class="checkbox-group" style="width:100%;"><input type="checkbox" id="editFood"/><label for="editFood" id="eLFood">بدل طعام</label></div>
       </div>
     </div>
-    <div class="field-group" style="margin-bottom:0;">
-      <label class="field-label" id="eLNotes">ملاحظات</label>
-      <input type="text" id="editNotes"/>
-    </div>
-    <div id="editApprovedInfo" style="display:none;background:#EAF3DE;border-radius:8px;padding:6px 12px;font-size:11px;color:#3B6D11;margin-top:8px;"></div>
     <div class="modal-actions">
       <button class="modal-cancel" onclick="closeEditModal()" id="eCancelB">إلغاء</button>
       <button class="modal-confirm" onclick="confirmEdit()" id="eConfirmB">حفظ</button>
@@ -589,39 +580,6 @@ body.lang-en .modal-actions { justify-content: flex-start; }
     <div class="modal-actions">
       <button class="modal-cancel" onclick="closeWorkerEditModal()" id="weCancelB">إلغاء</button>
       <button class="modal-confirm" onclick="confirmWorkerEdit()" id="weConfirmB">حفظ التعديل</button>
-    </div>
-  </div>
-</div>
-
-<!-- WORKER EDIT INFO MODAL -->
-<div id="editWorkerModal" style="display:none;" class="modal-overlay">
-  <div class="modal-box">
-    <div class="modal-title"><div class="modal-title-icon">👤</div><span id="ewModalTitle">تعديل بيانات الموظف</span></div>
-    <div class="field-group"><label class="field-label" id="ewLName">الاسم الكامل</label><input type="text" id="ewName"/></div>
-    <div class="field-group"><label class="field-label" id="ewLPin">رمز الدخول</label><input type="text" id="ewPin" maxlength="4"/></div>
-    <div class="field-group" style="margin-bottom:0;"><label class="field-label" id="ewLNotes">ملاحظات</label><input type="text" id="ewNotes"/></div>
-    <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeEditWorker()" id="ewCancelB">إلغاء</button>
-      <button class="modal-confirm" onclick="confirmEditWorker()" id="ewConfirmB">حفظ</button>
-    </div>
-  </div>
-</div>
-
-<!-- AVATAR MODAL -->
-<div id="avatarModal" style="display:none;" class="modal-overlay">
-  <div class="modal-box">
-    <div class="modal-title"><div class="modal-title-icon">📷</div><span id="avModalTitle">صورة الموظف</span></div>
-    <div style="text-align:center;margin-bottom:1rem;">
-      <div id="avPreview" style="width:90px;height:90px;border-radius:50%;background:#E6F1FB;display:inline-flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#185FA5;overflow:hidden;border:3px solid #B5D4F4;"></div>
-    </div>
-    <div style="margin-bottom:1rem;">
-      <label class="field-label" id="avLUpload">رفع صورة من الجهاز</label>
-      <input type="file" id="avFile" accept="image/*" onchange="previewAvatar(this)" style="width:100%;padding:8px;border:1.5px solid #E5E5E5;border-radius:10px;"/>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeAvatarModal()" id="avCancelB">إلغاء</button>
-      <button class="modal-confirm danger" onclick="removeAvatar()" id="avRemoveB" style="background:#888;">حذف الصورة</button>
-      <button class="modal-confirm" onclick="saveAvatar()" id="avSaveB">حفظ</button>
     </div>
   </div>
 </div>
@@ -714,7 +672,6 @@ const TR = {
     eCancelB:"إلغاء", eConfirmB:"حفظ",
     dModalT:"حذف الموظف", dCancelB:"إلغاء", dConfirmB:"حذف",
     stPending:"بانتظار الموافقة", stApproved:"معتمد", stRejected:"مرفوض", stPShort:"بانتظار",
-    thNotes:"ملاحظات", lNotes:"ملاحظات (اختياري)", eLNotes:"ملاحظات", approvedBy:"معتمد بواسطة",
     thDate:"التاريخ", thProject:"المشروع", thCity:"المدينة", thHours:"الساعات",
     thFood:"بدل طعام", thStatus:"الحالة", thWorker:"الموظف", thRole:"الصفة",
     thActions:"إجراءات", thName:"الاسم", thPin:"الرمز", thAction:"إجراء",
@@ -725,14 +682,6 @@ const TR = {
     deModalTitle:"حذف السجل",
     deConfirmMsg:"هل أنت متأكد من حذف هذا السجل؟",
     deCancelB:"إلغاء", deConfirmB:"حذف",
-    btnApproveAll:"اعتماد الكل", toastApproveAll:"تم اعتماد جميع السجلات ✓",
-    changePhoto:"انقر لتغيير الصورة",
-    ewModalTitle:"تعديل بيانات الموظف", ewLName:"الاسم الكامل", ewLPin:"رمز الدخول", ewLNotes:"ملاحظات",
-    ewCancelB:"إلغاء", ewConfirmB:"حفظ",
-    avModalTitle:"صورة الموظف", avLUpload:"رفع صورة من الجهاز",
-    avCancelB:"إلغاء", avRemoveB:"حذف الصورة", avSaveB:"حفظ",
-    toastPhotoSaved:"تم حفظ الصورة ✓", toastPhotoRemoved:"تم حذف الصورة",
-    errNoPhoto:"اختر صورة أولاً",
     toastAdded:"تم إضافة السجل ✓", toastAppr:"تم اعتماد الساعات ✓",
     toastRej:"تم رفض السجل", toastSaved:"تم حفظ التعديلات ✓",
     toastWAdded:"تم إضافة الموظف ✓", toastWDel:"تم حذف الموظف",
@@ -805,7 +754,6 @@ const TR = {
     eCancelB:"Cancel", eConfirmB:"Save",
     dModalT:"Delete Employee", dCancelB:"Cancel", dConfirmB:"Delete",
     stPending:"Pending Approval", stApproved:"Approved", stRejected:"Rejected", stPShort:"Pending",
-    thNotes:"Notes", lNotes:"Notes (optional)", eLNotes:"Notes", approvedBy:"Approved by",
     thDate:"Date", thProject:"Project", thCity:"City", thHours:"Hours",
     thFood:"Food Allow.", thStatus:"Status", thWorker:"Employee", thRole:"Role",
     thActions:"Actions", thName:"Name", thPin:"PIN", thAction:"Action",
@@ -816,14 +764,6 @@ const TR = {
     deModalTitle:"Delete Entry",
     deConfirmMsg:"Are you sure you want to delete this entry?",
     deCancelB:"Cancel", deConfirmB:"Delete",
-    btnApproveAll:"Approve All", toastApproveAll:"All entries approved ✓",
-    changePhoto:"Click to change photo",
-    ewModalTitle:"Edit Employee Info", ewLName:"Full Name", ewLPin:"PIN Code", ewLNotes:"Notes",
-    ewCancelB:"Cancel", ewConfirmB:"Save",
-    avModalTitle:"Employee Photo", avLUpload:"Upload photo from device",
-    avCancelB:"Cancel", avRemoveB:"Remove Photo", avSaveB:"Save",
-    toastPhotoSaved:"Photo saved ✓", toastPhotoRemoved:"Photo removed",
-    errNoPhoto:"Please select a photo first",
     toastAdded:"Entry added ✓", toastAppr:"Hours approved ✓",
     toastRej:"Entry rejected", toastSaved:"Changes saved ✓",
     toastWAdded:"Employee added ✓", toastWDel:"Employee deleted",
@@ -896,7 +836,6 @@ const TR = {
     eCancelB:"منسوخ", eConfirmB:"محفوظ",
     dModalT:"ملازم حذف", dCancelB:"منسوخ", dConfirmB:"حذف",
     stPending:"زیر التوا", stApproved:"منظور", stRejected:"مسترد", stPShort:"انتظار",
-    thNotes:"نوٹس", lNotes:"نوٹس (اختیاری)", eLNotes:"نوٹس", approvedBy:"منظور کنندہ",
     thDate:"تاریخ", thProject:"پروجیکٹ", thCity:"شہر", thHours:"گھنٹے",
     thFood:"کھانا", thStatus:"حیثیت", thWorker:"ملازم", thRole:"عہدہ",
     thActions:"اقدامات", thName:"نام", thPin:"پن", thAction:"اقدام",
@@ -907,14 +846,6 @@ const TR = {
     deModalTitle:"ریکارڈ حذف کریں",
     deConfirmMsg:"کیا آپ واقعی یہ ریکارڈ حذف کرنا چاہتے ہیں؟",
     deCancelB:"منسوخ", deConfirmB:"حذف",
-    btnApproveAll:"سب منظور کریں", toastApproveAll:"تمام ریکارڈز منظور ✓",
-    changePhoto:"تصویر تبدیل کریں",
-    ewModalTitle:"ملازم کی معلومات ترمیم", ewLName:"پورا نام", ewLPin:"پن کوڈ", ewLNotes:"نوٹس",
-    ewCancelB:"منسوخ", ewConfirmB:"محفوظ",
-    avModalTitle:"ملازم کی تصویر", avLUpload:"ڈیوائس سے تصویر اپلوڈ کریں",
-    avCancelB:"منسوخ", avRemoveB:"تصویر حذف", avSaveB:"محفوظ",
-    toastPhotoSaved:"تصویر محفوظ ✓", toastPhotoRemoved:"تصویر حذف",
-    errNoPhoto:"پہلے تصویر منتخب کریں",
     toastAdded:"ریکارڈ شامل ✓", toastAppr:"منظور ✓",
     toastRej:"مسترد", toastSaved:"محفوظ ✓",
     toastWAdded:"ملازم شامل ✓", toastWDel:"ملازم حذف",
@@ -1009,9 +940,7 @@ async function loadAll(){
     const wRes = await sb.from("workers").select("*");
     if(!wRes.ok){ showDbError("❌ خطأ في الاتصال بقاعدة البيانات — تحقق من SUPABASE_URL و SUPABASE_KEY"); showLoading(false); return false; }
     workers = {};
-    (wRes.data||[]).forEach(w => {
-      workers[w.id] = { name:w.name, role:w.role, pin:w.pin, avatar:w.avatar||"", notes:w.notes||"" };
-    });
+    (wRes.data||[]).forEach(w => { workers[w.id] = { name:w.name, role:w.role, pin:w.pin }; });
 
     // Load all entries
     const eRes = await sb.from("overtime_entries").select("*");
@@ -1024,9 +953,7 @@ async function loadAll(){
         id: e.id, date: e.date, hours: e.hours,
         project: e.project, city: e.city,
         food: e.food, status: e.status,
-        timeFrom: e.time_from||"", timeTo: e.time_to||"",
-        approved_at: e.approved_at||"", approved_by: e.approved_by||"",
-        notes: e.notes||""
+        timeFrom: e.time_from||"", timeTo: e.time_to||""
       });
     });
     dbReady = true;
@@ -1071,8 +998,7 @@ async function dbAddEntry(workerID, entryObj){
     food: entryObj.food,
     status: entryObj.status,
     time_from: entryObj.timeFrom||"",
-    time_to: entryObj.timeTo||"",
-    notes: entryObj.notes||""
+    time_to: entryObj.timeTo||""
   });
   return res.ok;
 }
@@ -1080,17 +1006,9 @@ async function dbAddEntry(workerID, entryObj){
 // ================================================================
 // DB — UPDATE ENTRY STATUS
 // ================================================================
-async function dbUpdateStatus(entryId, status, approvedBy){
-  const fields = { status };
-  if(status === "approved"){
-    fields.approved_at = new Date().toISOString();
-    fields.approved_by = approvedBy||"";
-  } else {
-    fields.approved_at = null;
-    fields.approved_by = "";
-  }
+async function dbUpdateStatus(entryId, status){
   const res = await sb.from("overtime_entries")
-    .update(fields, "id=eq." + entryId);
+    .update({ status }, "id=eq." + entryId);
   return res.ok;
 }
 
@@ -1225,7 +1143,7 @@ function applyTR(){
     btnPW:"btnPrev",btnNW:"btnNext",btnPS:"btnPrev",btnNS:"btnNext",
     ws1l:"ws1l",ws1s:"ws1s",ws2l:"ws2l",ws2s:"ws2s",ws3l:"ws3l",ws3s:"ws3s",
     addTitle:"addTitle",lDate:"lDate",
-    lHours:"lHours",lProject:"lProject",lCity:"lCity",lFood:"lFood",lNotes:"lNotes",
+    lHours:"lHours",lProject:"lProject",lCity:"lCity",lFood:"lFood",
     btnAddE:"btnAddE",wTableT:"wTableT",emptyW:"emptyMsg",
     sTab1:"sTab1",sTab2:"sTab2",sTab3:"sTab3",
     ss1l:"ss1l",ss1s:"ss1s",ss2l:"ss2l",ss2s:"ss2s",ss3l:"ss3l",ss3s:"ss3s",
@@ -1244,13 +1162,9 @@ function applyTR(){
     weLProject:"weLProject", weLCity:"weLCity",
     weLFood:"weLFood", weCancelB:"weCancelB", weConfirmB:"weConfirmB",
     eModalT:"eModalT",eLDate:"eLDate",eLHours:"eLHours",eLProj:"eLProj",eLCity:"eLCity",
-    eLStatus:"eLStatus",eLFood:"eLFood",eLNotes:"eLNotes",eCancelB:"eCancelB",eConfirmB:"eConfirmB",
+    eLStatus:"eLStatus",eLFood:"eLFood",eCancelB:"eCancelB",eConfirmB:"eConfirmB",
     eStP:"stPShort",eStA:"stApproved",eStR:"stRejected",
     deModalTitle:"deModalTitle", deCancelB:"deCancelB", deConfirmB:"deConfirmB",
-    ewModalTitle:"ewModalTitle", ewLName:"ewLName", ewLPin:"ewLPin", ewLNotes:"ewLNotes",
-    ewCancelB:"ewCancelB", ewConfirmB:"ewConfirmB",
-    avModalTitle:"avModalTitle", avLUpload:"avLUpload",
-    avCancelB:"avCancelB", avRemoveB:"avRemoveB", avSaveB:"avSaveB",
     dModalT:"dModalT",dCancelB:"dCancelB",dConfirmB:"dConfirmB",
     rTitle:"rTitle",rTypeLabel:"rTypeLabel",
     rdaily:"rdaily",rweekly:"rweekly",rmonthly:"rmonthly",ryearly:"ryearly",rcustom:"rcustom",
@@ -1416,14 +1330,13 @@ async function addEntry(){
   const pr=document.getElementById("entryProject").value.trim();
   const ci=document.getElementById("entryCity").value;
   const fo=document.getElementById("entryFood").checked;
-  const notes=document.getElementById("entryNotes")?.value.trim()||"";
   const fromT=document.getElementById("entryFrom").value||"";
   const toT=document.getElementById("entryTo").value||"";
   if(!pr||!ci)return toast(t("errFill"));
   if(isNaN(h)||h<=0||h>24)return toast(t("errHours"));
   const date=document.getElementById("entryDate")?.value||getTodayStr();
   const entry={date,hours:h,project:pr,city:ci,food:fo,status:"pending",id:Date.now(),
-    timeFrom:fromT, timeTo:toT, notes};
+    timeFrom:fromT, timeTo:toT};
   showLoading(true);
   const ok = await dbAddEntry(currentUser, entry);
   if(!ok){ showLoading(false); return toast("❌ فشل الحفظ — حاول مرة أخرى"); }
@@ -1437,8 +1350,6 @@ async function addEntry(){
   document.getElementById("entryFood").checked=false;
   document.getElementById("entryFrom").value="";
   document.getElementById("entryTo").value="";
-  const notesEl=document.getElementById("entryNotes");
-  if(notesEl)notesEl.value="";
   buildDateSelect(); // reset to today
   const prev=document.getElementById("hoursPreview");
   if(prev)prev.style.display="none";
@@ -1467,12 +1378,11 @@ function renderWT(){
   if(!list.length){body.innerHTML="<div class='empty-state'><div class='empty-icon'>📋</div>"+t("emptyMsg")+"</div>";return;}
   const totalH=list.reduce((s,e)=>s+e.hours,0),foodD=list.filter(e=>e.food).length;
   body.innerHTML=buildTable(
-    [t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus"),t("thNotes"),t("thActions")],
+    [t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus"),t("thActions")],
     list.map(e=>[
       e.date, fmtTimeRange(e), e.project, cityLabel(e.city), e.hours,
       e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
       "<span class='badge "+stClass(e.status)+"'>"+stLabel(e.status)+"</span>",
-      e.notes?`<span style="font-size:11px;color:#666;">${e.notes}</span>`:"—",
       canWorkerEdit(e)
         ? `<button class="bsa no-print" onclick="openWorkerEdit('${e.id}')">${t("btnEdit")}</button>`
         : `<span style="font-size:11px;color:#ccc;">—</span>`
@@ -1480,7 +1390,7 @@ function renderWT(){
     [t("totalLbl"),"","","","",
       "<span class='tp tp-b'>"+totalH+" "+t("hoursU")+"</span>",
       "<span class='tp tp-a'>"+foodD+" "+t("foodU")+"</span>",
-      "<span class='tp tp-g'>"+list.length+" "+t("workU")+"</span>","",""]
+      "<span class='tp tp-g'>"+list.length+" "+t("workU")+"</span>",""]
   );
 }
 
@@ -1494,9 +1404,6 @@ function buildSOWorkers(){
   const div=document.getElementById("soWorkersCheck"); if(!div)return;
   div.innerHTML=Object.keys(workers).map(k=>`
     <div class="wcheck checked" id="sow_${k}" onclick="toggleSOWorker('${k}')">
-      <div style="width:28px;height:28px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#185FA5;flex-shrink:0;overflow:hidden;">
-        ${workers[k].avatar?`<img src="${workers[k].avatar}" style="width:100%;height:100%;object-fit:cover;">`:initials(workers[k].name)}
-      </div>
       <input type="checkbox" id="sowcb_${k}" checked/>
       <label for="sowcb_${k}" style="pointer-events:none;">${workers[k].name}
         <span style="font-size:10px;color:#888;"> (${roleLabel(workers[k].role)})</span>
@@ -1571,39 +1478,22 @@ function buildGroupedTable(entries, showActions){
     const g=groups[wk];
     const approvedH=g.rows.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
     const foodD=g.rows.filter(e=>e.food).length;
-    const pendingIds=g.rows.filter(e=>e.status==="pending").map(e=>e.id);
     grandApprH+=approvedH; grandFoodD+=foodD; grandDays+=g.rows.length;
-
-    // Worker header with approve-all button
-    html+=`<div class="no-print" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#E6F1FB;border-bottom:1px solid #B5D4F4;flex-wrap:wrap;">
-      <div style="width:40px;height:40px;border-radius:50%;background:#185FA5;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;overflow:hidden;">
-        ${workers[wk]?.avatar?`<img src="${workers[wk].avatar}" style="width:100%;height:100%;object-fit:cover;">`:initials(g.name)}
-      </div>
-      <div style="flex:1;">
-        <div style="font-size:14px;font-weight:700;color:#185FA5;">${g.name}</div>
-        <div style="font-size:11px;color:#555;">${roleLabel(g.role)}</div>
-      </div>
-      ${showActions&&pendingIds.length>0?`<button class="no-print" onclick="approveAllWorker('${wk}',${JSON.stringify(pendingIds).replace(/"/g,"'")})"
-        style="background:#185FA5;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">
-        ✓ ${t("btnApproveAll")} (${pendingIds.length})
-      </button>`:""}
-    </div>
-    <div class="print-only" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#E6F1FB;border-bottom:1px solid #B5D4F4;">
+    // Worker header row
+    html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#E6F1FB;border-bottom:1px solid #B5D4F4;">
       <div style="width:36px;height:36px;border-radius:50%;background:#185FA5;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">${initials(g.name)}</div>
       <div>
         <div style="font-size:14px;font-weight:700;color:#185FA5;">${g.name}</div>
         <div style="font-size:11px;color:#555;">${roleLabel(g.role)}</div>
       </div>
     </div>`;
-
-    const cols=[t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus"),t("thNotes")];
+    const cols=[t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
     if(showActions) cols.push(t("thActions"));
     const rows=g.rows.map(e=>{
       const r=[
         e.date, fmtTimeRange(e), e.project, cityLabel(e.city), e.hours,
         e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
-        "<span class='badge "+stClass(e.status)+"'>"+stShort(e.status)+"</span>",
-        e.notes?`<span style="font-size:11px;color:#666;">${e.notes}</span>`:"—"
+        "<span class='badge "+stClass(e.status)+"'>"+stShort(e.status)+"</span>"
       ];
       if(showActions) r.push(`<div class="action-btns no-print">
         <button class="bsa" onclick="openEdit('${e.wk}','${e.id}')">${t("btnEdit")}</button>
@@ -1637,13 +1527,9 @@ async function chStatus(wk,id,status){
   const p=getPeriod(periodOffset),list=getEnt(wk,p.key),e=list.find(e=>String(e.id)===String(id));
   if(!e)return;
   showLoading(true);
-  const supName=document.getElementById("userName").textContent;
-  const ok=await dbUpdateStatus(id, status, supName);
+  const ok = await dbUpdateStatus(id, status);
   if(!ok){ showLoading(false); return toast("❌ فشل التحديث"); }
-  e.status=status;
-  if(status==="approved"){e.approved_at=new Date().toISOString();e.approved_by=supName;}
-  else{e.approved_at=null;e.approved_by="";}
-  showLoading(false);
+  e.status=status; showLoading(false);
   renderSO(); toast(status==="approved"?t("toastAppr"):t("toastRej"));
 }
 
@@ -1657,118 +1543,9 @@ function buildTable(headers,rows,totals){
   return`<div class="tbl-wrap"><table><thead><tr>${h}</tr></thead><tbody>${r}${tot}</tbody></table></div>`;
 }
 
-// Approve all pending entries for a worker
-async function approveAllWorker(wk, ids){
-  if(!ids||!ids.length)return;
-  showLoading(true);
-  let allOk=true;
-  for(const id of ids){
-    const supName=document.getElementById("userName").textContent;
-    const ok=await dbUpdateStatus(id,"approved", supName);
-    if(!ok){allOk=false;break;}
-    const p=getPeriod(periodOffset),list=getEnt(wk,p.key);
-    const e=list.find(e=>String(e.id)===String(id));
-    if(e){e.status="approved";e.approved_at=new Date().toISOString();e.approved_by=supName;}
-  }
-  showLoading(false);
-  if(allOk){renderSO();toast(t("toastApproveAll"));}
-  else toast("❌ حدث خطأ أثناء الاعتماد");
-}
-
 // ================================================================
-// EDIT WORKER INFO (name, pin, notes, avatar)
+// DELETE ENTRY (supervisor only)
 // ================================================================
-let editingWorkerKey=null, avatarWorkerKey=null;
-
-function openEditWorker(k){
-  editingWorkerKey=k;
-  document.getElementById("ewName").value=workers[k].name;
-  document.getElementById("ewPin").value=workers[k].pin;
-  document.getElementById("ewNotes").value=workers[k].notes||"";
-  document.getElementById("editWorkerModal").style.display="flex";
-}
-function closeEditWorker(){document.getElementById("editWorkerModal").style.display="none";editingWorkerKey=null;}
-async function confirmEditWorker(){
-  if(!editingWorkerKey)return;
-  const name=document.getElementById("ewName").value.trim();
-  const pin=document.getElementById("ewPin").value.trim();
-  const notes=document.getElementById("ewNotes").value.trim();
-  if(!name)return toast(t("errWName"));
-  if(pin.length<4||!/^\d+$/.test(pin))return toast(t("errPinFmt"));
-  showLoading(true);
-  const ok=await dbUpdateWorker(editingWorkerKey,{name,pin,notes});
-  if(!ok){showLoading(false);return toast("❌ فشل الحفظ");}
-  workers[editingWorkerKey].name=name;
-  workers[editingWorkerKey].pin=pin;
-  workers[editingWorkerKey].notes=notes;
-  showLoading(false);closeEditWorker();buildWorkerSel();renderMW();toast(t("toastSaved"));
-}
-
-// ================================================================
-// AVATAR (profile photo)
-// ================================================================
-function openAvatarEdit(k){
-  avatarWorkerKey=k;
-  const w=workers[k];
-  const prev=document.getElementById("avPreview");
-  prev.innerHTML=w.avatar
-    ?`<img src="${w.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-    :`<span>${initials(w.name)}</span>`;
-  document.getElementById("avFile").value="";
-  document.getElementById("avatarModal").style.display="flex";
-}
-function closeAvatarModal(){document.getElementById("avatarModal").style.display="none";avatarWorkerKey=null;}
-
-function previewAvatar(input){
-  const file=input.files[0]; if(!file)return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    document.getElementById("avPreview").innerHTML=
-      `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-  };
-  reader.readAsDataURL(file);
-}
-
-async function saveAvatar(){
-  if(!avatarWorkerKey)return;
-  const file=document.getElementById("avFile").files[0];
-  if(!file)return toast(t("errNoPhoto"));
-  // Resize image to max 200x200 and convert to base64
-  const reader=new FileReader();
-  reader.onload=async function(e){
-    const img=new Image();
-    img.onload=async function(){
-      const canvas=document.createElement("canvas");
-      const MAX=200;
-      let w=img.width,h=img.height;
-      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
-      else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
-      canvas.width=w;canvas.height=h;
-      canvas.getContext("2d").drawImage(img,0,0,w,h);
-      const b64=canvas.toDataURL("image/jpeg",0.75);
-      showLoading(true);
-      const ok=await dbUpdateWorker(avatarWorkerKey,{avatar:b64});
-      if(!ok){showLoading(false);return toast("❌ فشل رفع الصورة");}
-      workers[avatarWorkerKey].avatar=b64;
-      showLoading(false);closeAvatarModal();renderMW();
-      // Update worker cards in supervisor overview
-      buildSOWorkers();toast(t("toastPhotoSaved"));
-    };
-    img.src=e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-async function removeAvatar(){
-  if(!avatarWorkerKey)return;
-  showLoading(true);
-  const ok=await dbUpdateWorker(avatarWorkerKey,{avatar:""});
-  if(!ok){showLoading(false);return toast("❌ فشل الحذف");}
-  workers[avatarWorkerKey].avatar="";
-  showLoading(false);closeAvatarModal();renderMW();buildSOWorkers();toast(t("toastPhotoRemoved"));
-}
-
-
 let deletingEntry=null;
 function openDeleteEntry(wk,id){
   const p=getPeriod(periodOffset),list=getEnt(wk,p.key);
@@ -1912,10 +1689,6 @@ function openEdit(wk,id){
   document.getElementById("editCity").value=cityKey(e.city);
   document.getElementById("editStatus").value=e.status;
   document.getElementById("editFood").checked=e.food;
-  const enEl=document.getElementById("editNotes"); if(enEl)enEl.value=e.notes||"";
-  // Show approved info if applicable
-  const aiEl=document.getElementById("editApprovedInfo");
-  if(aiEl){ if(e.approved_at&&e.approved_by){aiEl.style.display="block";aiEl.textContent="✓ "+t("approvedBy")+": "+e.approved_by+" — "+new Date(e.approved_at).toLocaleDateString();}else aiEl.style.display="none"; }
   document.getElementById("editFrom").value=e.timeFrom||"";
   document.getElementById("editTo").value=e.timeTo||"";
   const prev=document.getElementById("editHoursPreview");
@@ -1928,7 +1701,6 @@ async function confirmEdit(){
   const nd=document.getElementById("editDate").value,nh=parseFloat(document.getElementById("editHours").value);
   const np=document.getElementById("editProject").value.trim(),nc=document.getElementById("editCity").value;
   const ns=document.getElementById("editStatus").value,nf=document.getElementById("editFood").checked;
-  const nn=document.getElementById("editNotes")?.value.trim()||"";
   if(!nd||isNaN(nh)||!np||!nc)return toast(t("errFill"));
   if(nh<=0||nh>24)return toast(t("errHours"));
   const nFrom=document.getElementById("editFrom").value||"";
@@ -1936,11 +1708,11 @@ async function confirmEdit(){
   showLoading(true);
   const ok = await dbUpdateEntry(editingE.id, {
     date: nd.replace(/-/g,"/"), hours:nh, project:np, city:nc, status:ns, food:nf,
-    time_from:nFrom, time_to:nTo, notes:nn
+    time_from:nFrom, time_to:nTo
   });
   if(!ok){ showLoading(false); return toast("❌ فشل الحفظ"); }
   const p=getPeriod(periodOffset),list=getEnt(editingE.wk,p.key),e=list.find(e=>String(e.id)===String(editingE.id));
-  if(e){ e.date=nd.replace(/-/g,"/");e.hours=nh;e.project=np;e.city=nc;e.status=ns;e.food=nf;e.timeFrom=nFrom;e.timeTo=nTo;e.notes=nn; }
+  if(e){ e.date=nd.replace(/-/g,"/");e.hours=nh;e.project=np;e.city=nc;e.status=ns;e.food=nf;e.timeFrom=nFrom;e.timeTo=nTo; }
   buildProjectsList();
   showLoading(false); closeEditModal(); renderSO(); toast(t("toastSaved"));
 }
@@ -1953,32 +1725,17 @@ function renderMW(){
   document.getElementById("wCount").textContent=keys.length+" "+t("recOf");
   const body=document.getElementById("wManageTable");
   if(!keys.length){body.innerHTML="<div class='empty-state'>"+t("emptyMsg")+"</div>";return;}
-  body.innerHTML=`<div class="tbl-wrap"><table><thead><tr>
-    <th>${t("thName")}</th><th>${t("thRole")}</th><th>${t("thPin")}</th><th>${t("thAction")}</th>
-  </tr></thead><tbody>
+  body.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>${t("thName")}</th><th>${t("thRole")}</th><th>${t("thPin")}</th><th>${t("thAction")}</th></tr></thead><tbody>
   ${keys.map(k=>`<tr>
     <td><div style="display:flex;align-items:center;gap:10px;">
-      <div onclick="openAvatarEdit('${k}')" style="width:40px;height:40px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#185FA5;flex-shrink:0;cursor:pointer;overflow:hidden;border:2px solid #B5D4F4;position:relative;" title="${t("changePhoto")}">
-        ${workers[k].avatar
-          ? `<img src="${workers[k].avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
-          : `<span>${initials(workers[k].name)}</span>`}
-      </div>
-      <div>
-        <div style="font-weight:600;">${workers[k].name}</div>
-        ${workers[k].notes?`<div style="font-size:11px;color:#888;">${workers[k].notes}</div>`:""}
-      </div>
+      <div style="width:34px;height:34px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#185FA5;flex-shrink:0;">${initials(workers[k].name)}</div>${workers[k].name}
     </div></td>
     <td><select onchange="chRole('${k}',this.value)" style="width:auto;padding:5px 10px;font-size:13px;">
       <option value="worker" ${workers[k].role==="worker"?"selected":""}>${t("rW")}</option>
       <option value="technician" ${workers[k].role==="technician"?"selected":""}>${t("rT")}</option>
       <option value="supervisor" ${workers[k].role==="supervisor"?"selected":""}>${t("rS")}</option>
     </select></td>
-    <td>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-family:monospace;letter-spacing:3px;" id="pin_${k}">${workers[k].pin}</span>
-        <button class="bsa" onclick="openEditWorker('${k}')" style="padding:3px 8px;font-size:11px;">${t("btnEdit")}</button>
-      </div>
-    </td>
+    <td style="font-family:monospace;letter-spacing:3px;">${workers[k].pin}</td>
     <td><button class="bsr" onclick="openDel('${k}')">${t("btnDelete")}</button></td>
   </tr>`).join("")}</tbody></table></div>`;
 }
@@ -2366,10 +2123,10 @@ function printMyReport(){
 function exportWExcel(){
   const p=getPeriod(periodOffset),list=getEnt(currentUser,p.key);
   if(!list.length)return toast(t("toastNoData"));
-  const h=[t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus"),t("thNotes")];
-  const r=list.map(e=>[e.date,fmtTimeRange(e),e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stLabel(e.status),e.notes||""]);
+  const h=[t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")];
+  const r=list.map(e=>[e.date,e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stLabel(e.status)]);
   const th=list.reduce((s,e)=>s+e.hours,0),fd=list.filter(e=>e.food).length;
-  exportXLS([h,...r,[t("totalLbl"),"","","",th+" "+t("hoursU"),fd+" "+t("foodU"),list.length+" "+t("workU"),""]],workers[currentUser].name,workers[currentUser].name+"_"+p.label);
+  exportXLS([h,...r,[t("totalLbl"),"","",th+" "+t("hoursU"),fd+" "+t("foodU"),list.length+" "+t("workU")]],workers[currentUser].name,workers[currentUser].name+"_"+p.label);
 }
 function exportSExcel(statusFilter){
   const p=getPeriod(periodOffset);
@@ -2398,22 +2155,22 @@ function exportSExcel(statusFilter){
     // Worker header
     data.push([g.name+" — "+roleLabel(g.role)]);
     // Column headers
-    data.push([t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus"),t("thNotes")]);
+    data.push([t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")]);
     // Rows
     g.rows.forEach(e=>{
-      data.push([e.date,fmtTimeRange(e),e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stLabel(e.status),e.notes||""]);
+      data.push([e.date,fmtTimeRange(e),e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",stLabel(e.status)]);
     });
     const apH=g.rows.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
     const fD=g.rows.filter(e=>e.food).length;
     grandH+=apH; grandF+=fD; grandD+=g.rows.length;
-    data.push([t("totalLbl"),"","","",apH+" "+t("hoursU"),fD+" "+t("foodU"),g.rows.length+" "+t("workU"),""]);
+    data.push([t("totalLbl"),"","",apH+" "+t("hoursU"),fD+" "+t("foodU"),g.rows.length+" "+t("workU")]);
     data.push([]); // spacer
   });
   if(order.length>1){
     data.push([t("totalLbl")+" — "+t("allEmp"),"","",grandH+" "+t("hoursU"),grandF+" "+t("foodU"),grandD+" "+t("workU")]);
   }
   const ws=XLSX.utils.aoa_to_sheet(data);
-  ws["!cols"]=[{wch:14},{wch:14},{wch:22},{wch:14},{wch:10},{wch:10},{wch:16},{wch:24}];
+  ws["!cols"]=[{wch:14},{wch:22},{wch:14},{wch:12},{wch:12},{wch:18}];
   XLSX.utils.book_append_sheet(wb,ws,label.slice(0,31));
   XLSX.writeFile(wb,label+"_"+p.label+".xlsx");
   toast(t("toastExp"));
