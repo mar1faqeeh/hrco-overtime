@@ -1045,19 +1045,10 @@ function periodKeyFromDate(dateStr){
   const parts = dateStr.split("/");
   if(parts.length < 3) return "0-0";
   const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-  // Period runs 26th of month A to 25th of month B
-  // getPeriod(offset) returns key = start.getFullYear() + "-" + start.getMonth()
-  // start = new Date(year, month-1+offset, 26) where month is current month index
-  // So for a date, start of its period = 26th of previous month if day >= 26, else 26th of month before previous
-  let startYear = d.getFullYear();
-  let startMonth = d.getMonth(); // 0-based
-  if(d.getDate() <= 25){
-    // This date falls in the period that started on the 26th of the previous month
-    startMonth -= 1;
-    if(startMonth < 0){ startMonth = 11; startYear--; }
-  }
-  // startMonth here is the month index of the 26th start date
-  return startYear + "-" + startMonth;
+  // Period: 26th of prev month → 25th of this month
+  let py = d.getFullYear(), pm = d.getMonth();
+  if(d.getDate() <= 25){ pm -= 1; if(pm < 0){ pm = 11; py--; } }
+  return py + "-" + pm;
 }
 
 function getEnt(wk, pk){
@@ -2485,24 +2476,18 @@ async function init(){
   setLang(lang);
   buildCitySel("entryCity");
   buildCitySel("editCity");
-  buildCitySel("weCity");
   // Show loading while fetching from Supabase
   showLoading(true);
-  try {
-    const ok = await Promise.race([
-      loadAll(),
-      new Promise(resolve => setTimeout(() => resolve(false), 10000)) // 10s timeout
-    ]);
-    if(!ok && SUPABASE_URL==="YOUR_SUPABASE_URL"){
+  const ok = await loadAll();
+  if(ok){
+    buildWorkerSel();
+  } else {
+    // If Supabase not configured, show config message
+    if(SUPABASE_URL==="YOUR_SUPABASE_URL"){
       showDbError("⚙️ ضع SUPABASE_URL و SUPABASE_KEY في الكود أولاً");
     }
-  } catch(e){
-    console.error("Init error:", e);
-  } finally {
-    // Always hide loading and build worker select regardless of result
-    showLoading(false);
-    buildWorkerSel();
   }
+  showLoading(false);
 }
 init();
 </script>
