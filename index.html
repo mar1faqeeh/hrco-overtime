@@ -1045,10 +1045,19 @@ function periodKeyFromDate(dateStr){
   const parts = dateStr.split("/");
   if(parts.length < 3) return "0-0";
   const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-  // Period: 26th of prev month → 25th of this month
-  let py = d.getFullYear(), pm = d.getMonth();
-  if(d.getDate() <= 25){ pm -= 1; if(pm < 0){ pm = 11; py--; } }
-  return py + "-" + pm;
+  // Period runs 26th of month A to 25th of month B
+  // getPeriod(offset) returns key = start.getFullYear() + "-" + start.getMonth()
+  // start = new Date(year, month-1+offset, 26) where month is current month index
+  // So for a date, start of its period = 26th of previous month if day >= 26, else 26th of month before previous
+  let startYear = d.getFullYear();
+  let startMonth = d.getMonth(); // 0-based
+  if(d.getDate() <= 25){
+    // This date falls in the period that started on the 26th of the previous month
+    startMonth -= 1;
+    if(startMonth < 0){ startMonth = 11; startYear--; }
+  }
+  // startMonth here is the month index of the 26th start date
+  return startYear + "-" + startMonth;
 }
 
 function getEnt(wk, pk){
@@ -1602,7 +1611,7 @@ function buildGroupedTable(entries, showActions){
         <div style="font-size:14px;font-weight:700;color:#185FA5;">${g.name}</div>
         <div style="font-size:11px;color:#555;">${roleLabel(g.role)}</div>
       </div>
-      ${showActions&&pendingIds.length>0?`<button class="no-print" onclick="approveAllWorker('${wk}',${JSON.stringify(pendingIds).replace(/"/g,"'")})"
+      ${pendingIds.length>0?`<button class="no-print" onclick="approveAllWorker('${wk}',${JSON.stringify(pendingIds).replace(/"/g,"'")})"
         style="background:#185FA5;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">
         ✓ ${t("btnApproveAll")} (${pendingIds.length})
       </button>`:""}
@@ -1615,23 +1624,28 @@ function buildGroupedTable(entries, showActions){
       </div>
     </div>`;
 
-    const cols=[t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus"),t("thNotes")];
-    if(showActions) cols.push(t("thActions"));
+    // Columns: Date(0) Time(1) Project(2) City(3) Hours(4) Food(5) Status(6) Notes(7) Actions(8)
+    const cols=[t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus"),t("thNotes"),t("thActions")];
     const rows=g.rows.map(e=>{
       const r=[
-        e.date, fmtTimeRange(e), e.project, cityLabel(e.city), e.hours,
+        e.date,
+        fmtTimeRange(e),
+        e.project,
+        cityLabel(e.city),
+        e.hours,
         e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
         "<span class='badge "+stClass(e.status)+"'>"+stShort(e.status)+"</span>",
-        e.notes?`<span style="font-size:11px;color:#666;">${e.notes}</span>`:"—"
+        e.notes?`<span style="font-size:11px;color:#666;">${e.notes}</span>`:"—",
+        `<div class="action-btns no-print">
+          <button class="bsa" onclick="openEdit('${e.wk}','${e.id}')">${t("btnEdit")}</button>
+          ${e.status!=="approved"?`<button class="bsg" onclick="chStatus('${e.wk}','${e.id}','approved')">${t("btnApprove")}</button>`:""}
+          ${e.status!=="rejected"?`<button class="bsr" onclick="chStatus('${e.wk}','${e.id}','rejected')">${t("btnReject")}</button>`:""}
+          <button class="bsdel" onclick="openDeleteEntry('${e.wk}','${e.id}')">🗑</button>
+        </div>`
       ];
-      if(showActions) r.push(`<div class="action-btns no-print">
-        <button class="bsa" onclick="openEdit('${e.wk}','${e.id}')">${t("btnEdit")}</button>
-        ${e.status!=="approved"?`<button class="bsg" onclick="chStatus('${e.wk}','${e.id}','approved')">${t("btnApprove")}</button>`:""}
-        ${e.status!=="rejected"?`<button class="bsr" onclick="chStatus('${e.wk}','${e.id}','rejected')">${t("btnReject")}</button>`:""}
-        <button class="bsdel" onclick="openDeleteEntry('${e.wk}','${e.id}')">🗑</button>
-      </div>`);
       return r;
     });
+    // Totals row — indices: 0=date, 4=hours, 5=food, 6=workdays, rest empty
     const tot=Array(cols.length).fill("");
     tot[0]=t("totalLbl");
     tot[4]="<span class='tp tp-b'>"+approvedH+" "+t("hoursU")+"</span>";
@@ -1648,6 +1662,8 @@ function buildGroupedTable(entries, showActions){
       <span style="background:rgba(255,255,255,0.2);border-radius:20px;padding:3px 12px;font-size:12px;">${grandDays} ${t("workU")}</span>
     </div>`;
   }
+  return html;
+}
   return html;
 }
 function setFilter(wk){filterWorker=wk;renderSO();}
@@ -2465,22 +2481,38 @@ function toast(msg){const el=document.getElementById("toast");el.textContent=msg
 // INIT — load from Supabase then show login
 // ================================================================
 async function init(){
-  // Apply language first (fast, local)
+  // Apply language and show login screen IMMEDIATELY (no loading block)
   setLang(lang);
   buildCitySel("entryCity");
   buildCitySel("editCity");
-  // Show loading while fetching from Supabase
-  showLoading(true);
-  const ok = await loadAll();
-  if(ok){
-    buildWorkerSel();
-  } else {
-    // If Supabase not configured, show config message
-    if(SUPABASE_URL==="YOUR_SUPABASE_URL"){
-      showDbError("⚙️ ضع SUPABASE_URL و SUPABASE_KEY في الكود أولاً");
+  buildCitySel("weCity");
+
+  // Show a small spinner only on the login button, not full overlay
+  const btn = document.getElementById("btnLogin");
+  if(btn){ btn.textContent = "..."; btn.disabled = true; }
+
+  try {
+    const ok = await Promise.race([
+      loadAll(),
+      new Promise(resolve => setTimeout(() => resolve(false), 8000))
+    ]);
+    if(ok){
+      buildWorkerSel();
+    } else {
+      if(SUPABASE_URL === "YOUR_SUPABASE_URL"){
+        showDbError("⚙️ ضع SUPABASE_URL و SUPABASE_KEY في الكود أولاً");
+      } else {
+        showDbError("❌ تعذّر الاتصال — تحقق من اتصال الإنترنت وأعد تحميل الصفحة");
+      }
     }
+  } catch(e){
+    console.error("Init error:", e);
+    showDbError("❌ خطأ في التحميل — أعد تحميل الصفحة");
+  } finally {
+    // Always restore the login button
+    if(btn){ btn.textContent = t("btnLogin"); btn.disabled = false; }
+    showLoading(false);
   }
-  showLoading(false);
 }
 init();
 </script>
