@@ -2174,10 +2174,15 @@ function generateReport(){
 
   workerOrder.forEach(wk=>{
     const grp=workerGroups[wk];
-    const approvedH=grp.entries.filter(e=>e.status==="approved").reduce((s,e)=>s+e.hours,0);
-    const foodD=grp.entries.filter(e=>e.food).length;
-    grandApprH+=approvedH; grandFoodD+=foodD; grandDays+=grp.entries.length;
+    // For display: show all entries
+    // For print/export: approved only
+    const allEntries=grp.entries;
+    const approvedEntries=grp.entries.filter(e=>e.status==="approved");
+    const approvedH=approvedEntries.reduce((s,e)=>s+e.hours,0);
+    const foodD=approvedEntries.filter(e=>e.food).length;
+    grandApprH+=approvedH; grandFoodD+=foodD; grandDays+=approvedEntries.length;
 
+    // Worker header
     html+=`<div class="worker-section-header print-only">
       <h3>${grp.name}</h3>
       <p>${roleLabel(grp.role)}</p>
@@ -2185,29 +2190,56 @@ function generateReport(){
     html+=`<div class="worker-name-screen no-print" style="font-size:14px;font-weight:600;color:#185FA5;padding:8px 12px;background:#E6F1FB;border-radius:8px;margin-bottom:8px;">
       ${grp.name} — <span class="badge ${roleClass(grp.role)}">${roleLabel(grp.role)}</span>
     </div>`;
+
+    // Screen table: all entries with correct column order
+    const screenRows=allEntries.map(e=>[
+      e.date, fmtTimeRange(e), e.project, cityLabel(e.city), e.hours,
+      e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
+      "<span class='badge "+stClass(e.status)+"'>"+stShort(e.status)+"</span>",
+      e.notes?`<span style="font-size:11px;color:#666;">${e.notes}</span>`:"—"
+    ]);
+    const screenTot=Array(8).fill("");
+    screenTot[0]=t("totalLbl");
+    screenTot[4]="<span class='tp tp-b'>"+approvedH+" "+t("hoursU")+"</span>";
+    screenTot[5]="<span class='tp tp-a'>"+foodD+" "+t("foodU")+"</span>";
+    screenTot[6]="<span class='tp tp-g'>"+approvedEntries.length+" "+t("workU")+"</span>";
+    html+=`<div class="no-print">`;
     html+=buildTable(
-      [t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus")],
-      grp.entries.map(e=>[
-        e.date, e.project, cityLabel(e.city), e.hours,
-        e.food?"<span class='food-yes'>✓</span>":"<span class='food-no'>—</span>",
-        "<span class='badge "+stClass(e.status)+"'>"+stShort(e.status)+"</span>"
-      ]),
-      [t("totalLbl"),"","",
-        "<span class='tp tp-b'>"+approvedH+" "+t("hoursU")+"</span>",
-        "<span class='tp tp-a'>"+foodD+" "+t("foodU")+"</span>",
-        "<span class='tp tp-g'>"+grp.entries.length+" "+t("workU")+"</span>"
-      ]
+      [t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thStatus"),t("thNotes")],
+      screenRows, screenTot
     );
+    html+=`</div>`;
+
+    // Print table: approved only
+    if(approvedEntries.length>0){
+      const printRows=approvedEntries.map(e=>[
+        e.date, fmtTimeRange(e), e.project, cityLabel(e.city), e.hours,
+        e.food?"✓":"—",
+        e.notes||"—"
+      ]);
+      const printTot=Array(7).fill("");
+      printTot[0]=t("totalLbl");
+      printTot[4]=""+approvedH+" "+t("hoursU");
+      printTot[5]=""+foodD+" "+t("foodU");
+      printTot[6]=""+approvedEntries.length+" "+t("workU");
+      html+=`<div class="print-only">`;
+      html+=buildTable(
+        [t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thNotes")],
+        printRows, printTot
+      );
+      html+=`</div>`;
+    }
+
     html+=`<div style="margin-bottom:20px;"></div>`;
   });
 
-  // Grand total row if multiple workers
+  // Grand total
   if(workerOrder.length>1){
     html+=`<div style="background:#1a3d6b;color:white;border-radius:8px;padding:10px 16px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
       <strong>${t("totalLbl")} — ${t("allEmp")}</strong>
-      <span class="r-pill" style="background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:12px;">${grandApprH} ${t("hoursU")}</span>
-      <span class="r-pill" style="background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:12px;">${grandFoodD} ${t("foodU")}</span>
-      <span class="r-pill" style="background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:12px;">${grandDays} ${t("workU")}</span>
+      <span style="background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:12px;">${grandApprH} ${t("hoursU")}</span>
+      <span style="background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:12px;">${grandFoodD} ${t("foodU")}</span>
+      <span style="background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 12px;font-size:12px;">${grandDays} ${t("workU")}</span>
     </div>`;
   }
   body.innerHTML=html;
