@@ -1563,28 +1563,21 @@ function renderSO(){
   document.getElementById("sPendC").textContent=allForStats.filter(e=>e.status==="pending").length;
   document.getElementById("sApprC").textContent=allForStats.filter(e=>e.status==="approved").length;
 
-  const pending=all.filter(e=>e.status==="pending");
-  const approved=all.filter(e=>e.status==="approved");
-
-  // Pending table
+  // Show ALL entries (pending + approved + rejected) in pending table
   const pendBody=document.getElementById("sPendBody");
   if(pendBody){
-    if(!pending.length){
-      pendBody.innerHTML="<div class='empty-state'><div class='empty-icon'>⏳</div>"+t("emptyMsg")+"</div>";
+    if(!all.length){
+      pendBody.innerHTML="<div class='empty-state'><div class='empty-icon'>📋</div>"+t("emptyMsg")+"</div>";
     } else {
-      pendBody.innerHTML=buildGroupedTable(pending,true);
+      pendBody.innerHTML=buildGroupedTable(all,true);
     }
   }
 
-  // Approved table
+  // Hide the approved table (no longer needed as separate section)
   const apprBody=document.getElementById("sApprBody");
-  if(apprBody){
-    if(!approved.length){
-      apprBody.innerHTML="<div class='empty-state'><div class='empty-icon'>✅</div>"+t("emptyMsg")+"</div>";
-    } else {
-      apprBody.innerHTML=buildGroupedTable(approved,false);
-    }
-  }
+  if(apprBody) apprBody.innerHTML="";
+  const apprCard=apprBody?.closest(".card");
+  if(apprCard) apprCard.style.display="none";
 }
 
 // Build grouped table: worker header then rows (no worker/role columns)
