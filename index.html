@@ -733,6 +733,10 @@ const TR = {
     avCancelB:"إلغاء", avRemoveB:"حذف الصورة", avSaveB:"حفظ",
     toastPhotoSaved:"تم حفظ الصورة ✓", toastPhotoRemoved:"تم حذف الصورة",
     errNoPhoto:"اختر صورة أولاً",
+    errSuspended:"هذا الحساب موقوف مؤقتاً — يرجى مراجعة المشرف",
+    thAccStatus:"حالة الحساب", statusActive:"نشط", statusSuspended:"موقوف",
+    btnSuspend:"إيقاف مؤقت", btnUnsuspend:"إلغاء الإيقاف",
+    toastSuspended:"تم إيقاف الحساب مؤقتاً ✓", toastUnsuspended:"تم إلغاء الإيقاف ✓",
     toastAdded:"تم إضافة السجل ✓", toastAppr:"تم اعتماد الساعات ✓",
     toastRej:"تم رفض السجل", toastSaved:"تم حفظ التعديلات ✓",
     toastWAdded:"تم إضافة الموظف ✓", toastWDel:"تم حذف الموظف",
@@ -824,6 +828,10 @@ const TR = {
     avCancelB:"Cancel", avRemoveB:"Remove Photo", avSaveB:"Save",
     toastPhotoSaved:"Photo saved ✓", toastPhotoRemoved:"Photo removed",
     errNoPhoto:"Please select a photo first",
+    errSuspended:"This account is suspended — please contact your supervisor",
+    thAccStatus:"Account Status", statusActive:"Active", statusSuspended:"Suspended",
+    btnSuspend:"Suspend", btnUnsuspend:"Unsuspend",
+    toastSuspended:"Account suspended ✓", toastUnsuspended:"Account unsuspended ✓",
     toastAdded:"Entry added ✓", toastAppr:"Hours approved ✓",
     toastRej:"Entry rejected", toastSaved:"Changes saved ✓",
     toastWAdded:"Employee added ✓", toastWDel:"Employee deleted",
@@ -915,6 +923,10 @@ const TR = {
     avCancelB:"منسوخ", avRemoveB:"تصویر حذف", avSaveB:"محفوظ",
     toastPhotoSaved:"تصویر محفوظ ✓", toastPhotoRemoved:"تصویر حذف",
     errNoPhoto:"پہلے تصویر منتخب کریں",
+    errSuspended:"یہ اکاؤنٹ معطل ہے — براہ کرم سپروائزر سے رابطہ کریں",
+    thAccStatus:"اکاؤنٹ کی حیثیت", statusActive:"فعال", statusSuspended:"معطل",
+    btnSuspend:"عارضی معطلی", btnUnsuspend:"معطلی ختم کریں",
+    toastSuspended:"اکاؤنٹ معطل ✓", toastUnsuspended:"معطلی ختم ✓",
     toastAdded:"ریکارڈ شامل ✓", toastAppr:"منظور ✓",
     toastRej:"مسترد", toastSaved:"محفوظ ✓",
     toastWAdded:"ملازم شامل ✓", toastWDel:"ملازم حذف",
@@ -1010,7 +1022,7 @@ async function loadAll(){
     if(!wRes.ok){ showDbError("❌ خطأ في الاتصال بقاعدة البيانات — تحقق من SUPABASE_URL و SUPABASE_KEY"); showLoading(false); return false; }
     workers = {};
     (wRes.data||[]).forEach(w => {
-      workers[w.id] = { name:w.name, role:w.role, pin:w.pin, avatar:w.avatar||"", notes:w.notes||"" };
+      workers[w.id] = { name:w.name, role:w.role, pin:w.pin, avatar:w.avatar||"", notes:w.notes||"", suspended:!!w.suspended };
     });
 
     // Load all entries
@@ -1215,7 +1227,12 @@ function cityLabel(val){
 function buildWorkerSel(){
   const s=document.getElementById("workerSelect");
   s.innerHTML="<option value=''>-- "+t("lSelectW")+" --</option>";
-  Object.keys(workers).forEach(k=>{const o=document.createElement("option");o.value=k;o.textContent=workers[k].name+" ("+roleLabel(workers[k].role)+")";s.appendChild(o);});
+  Object.keys(workers).forEach(k=>{
+    const o=document.createElement("option");
+    o.value=k;
+    o.textContent=workers[k].name+" ("+roleLabel(workers[k].role)+")"+(workers[k].suspended?" 🔒 "+t("statusSuspended"):"");
+    s.appendChild(o);
+  });
 }
 function refreshPeriod(){
   const p=getPeriod(periodOffset);
@@ -1302,6 +1319,7 @@ function doLogin(){
     const w=document.getElementById("workerSelect").value;
     const p=document.getElementById("workerPass").value;
     if(!w)return toast(t("errSelName"));
+    if(workers[w].suspended)return toast(t("errSuspended"));
     if(p!==workers[w].pin)return toast(t("errPin"));
     currentUser=w;currentRole="worker";
     document.getElementById("userName").textContent=workers[w].name;
@@ -1980,11 +1998,13 @@ function renderMW(){
   const body=document.getElementById("wManageTable");
   if(!keys.length){body.innerHTML="<div class='empty-state'>"+t("emptyMsg")+"</div>";return;}
   body.innerHTML=`<div class="tbl-wrap"><table><thead><tr>
-    <th>${t("thName")}</th><th>${t("thRole")}</th><th>${t("thPin")}</th><th>${t("thAction")}</th>
+    <th>${t("thName")}</th><th>${t("thRole")}</th><th>${t("thPin")}</th><th>${t("thAccStatus")}</th><th>${t("thAction")}</th>
   </tr></thead><tbody>
-  ${keys.map(k=>`<tr>
+  ${keys.map(k=>{
+    const isSusp=!!workers[k].suspended;
+    return `<tr style="${isSusp?'opacity:0.6;':''}">
     <td><div style="display:flex;align-items:center;gap:10px;">
-      <div onclick="openAvatarEdit('${k}')" style="width:40px;height:40px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#185FA5;flex-shrink:0;cursor:pointer;overflow:hidden;border:2px solid #B5D4F4;position:relative;" title="${t("changePhoto")}">
+      <div onclick="openAvatarEdit('${k}')" style="width:40px;height:40px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#185FA5;flex-shrink:0;cursor:pointer;overflow:hidden;border:2px solid ${isSusp?'#A32D2D':'#B5D4F4'};position:relative;" title="${t("changePhoto")}">
         ${workers[k].avatar
           ? `<img src="${workers[k].avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`
           : `<span>${initials(workers[k].name)}</span>`}
@@ -1994,7 +2014,7 @@ function renderMW(){
         ${workers[k].notes?`<div style="font-size:11px;color:#888;">${workers[k].notes}</div>`:""}
       </div>
     </div></td>
-    <td><select onchange="chRole('${k}',this.value)" style="width:auto;padding:5px 10px;font-size:13px;">
+    <td><select onchange="chRole('${k}',this.value)" style="width:auto;padding:5px 10px;font-size:13px;" ${isSusp?'disabled':''}>
       <option value="worker" ${workers[k].role==="worker"?"selected":""}>${t("rW")}</option>
       <option value="technician" ${workers[k].role==="technician"?"selected":""}>${t("rT")}</option>
       <option value="supervisor" ${workers[k].role==="supervisor"?"selected":""}>${t("rS")}</option>
@@ -2005,8 +2025,20 @@ function renderMW(){
         <button class="bsa" onclick="openEditWorker('${k}')" style="padding:3px 8px;font-size:11px;">${t("btnEdit")}</button>
       </div>
     </td>
-    <td><button class="bsr" onclick="openDel('${k}')">${t("btnDelete")}</button></td>
-  </tr>`).join("")}</tbody></table></div>`;
+    <td>
+      ${isSusp
+        ? `<span class="badge" style="background:#FCEBEB;color:#A32D2D;">${t("statusSuspended")}</span>`
+        : `<span class="badge" style="background:#EAF3DE;color:#3B6D11;">${t("statusActive")}</span>`}
+    </td>
+    <td>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        ${isSusp
+          ? `<button class="bsg" onclick="toggleSuspend('${k}',false)">${t("btnUnsuspend")}</button>`
+          : `<button class="bsa" onclick="toggleSuspend('${k}',true)" style="background:#FAEEDA;color:#854F0B;">${t("btnSuspend")}</button>`}
+        <button class="bsr" onclick="openDel('${k}')">${t("btnDelete")}</button>
+      </div>
+    </td>
+  </tr>`;}).join("")}</tbody></table></div>`;
 }
 async function addWorker(){
   const name=document.getElementById("newWName").value.trim();
@@ -2028,6 +2060,15 @@ async function chRole(k,r){
   const ok=await dbUpdateWorker(k,{role:r});
   if(!ok){showLoading(false);return toast("❌ فشل التحديث");}
   workers[k].role=r;showLoading(false);buildWorkerSel();
+}
+async function toggleSuspend(k,suspend){
+  showLoading(true);
+  const ok=await dbUpdateWorker(k,{suspended:suspend});
+  if(!ok){showLoading(false);return toast("❌ فشل التحديث");}
+  workers[k].suspended=suspend;
+  showLoading(false);
+  renderMW();buildWorkerSel();buildSOWorkers();
+  toast(suspend?t("toastSuspended"):t("toastUnsuspended"));
 }
 function openDel(k){
   delWorkerKey=k;
