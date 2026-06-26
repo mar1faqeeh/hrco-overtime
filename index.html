@@ -324,7 +324,7 @@ body.lang-en .modal-actions { justify-content: flex-start; }
             </div>
             <div class="field-group" style="margin:0;"><label class="field-label" id="lHours">عدد الساعات</label>
               <div style="display:flex;align-items:center;gap:8px;">
-                <input type="number" id="entryHours" min="0.5" max="24" step="0.5" style="flex:1;" oninput="clearTimePicker()" placeholder="0"/>
+                <input type="number" id="entryHours" min="0" max="24" step="0.5" style="flex:1;" oninput="clearTimePicker()" placeholder="0"/>
                 <span style="font-size:11px;color:#888;white-space:nowrap;" id="lOrTime">أو</span>
               </div>
             </div>
@@ -741,7 +741,8 @@ const TR = {
     toastRej:"تم رفض السجل", toastSaved:"تم حفظ التعديلات ✓",
     toastWAdded:"تم إضافة الموظف ✓", toastWDel:"تم حذف الموظف",
     toastExp:"تم التصدير ✓", toastNoData:"لا توجد بيانات للتصدير",
-    errFill:"يرجى ملء جميع الحقول", errHours:"الساعات يجب أن تكون بين 0.5 و 16",
+    errFill:"يرجى ملء جميع الحقول", errHours:"الساعات يجب أن تكون بين 0 و 24",
+    errNoHoursNoFood:"أدخل عدد الساعات أو فعّل بدل الطعام على الأقل",
     errSelName:"اختر اسمك أولاً", errPin:"رمز الدخول غير صحيح",
     errPass:"كلمة المرور غير صحيحة", errPinFmt:"الرمز يجب أن يكون 4 أرقام",
     errWName:"أدخل اسم الموظف", errSelWorkers:"اختر موظفاً على الأقل",
@@ -836,7 +837,8 @@ const TR = {
     toastRej:"Entry rejected", toastSaved:"Changes saved ✓",
     toastWAdded:"Employee added ✓", toastWDel:"Employee deleted",
     toastExp:"Exported ✓", toastNoData:"No data to export",
-    errFill:"Please fill all fields", errHours:"Hours must be 0.5–16",
+    errFill:"Please fill all fields", errHours:"Hours must be between 0 and 24",
+    errNoHoursNoFood:"Enter hours or enable food allowance at least",
     errSelName:"Select your name first", errPin:"Incorrect PIN",
     errPass:"Incorrect password", errPinFmt:"PIN must be 4 digits",
     errWName:"Enter employee name", errSelWorkers:"Select at least one employee",
@@ -931,7 +933,8 @@ const TR = {
     toastRej:"مسترد", toastSaved:"محفوظ ✓",
     toastWAdded:"ملازم شامل ✓", toastWDel:"ملازم حذف",
     toastExp:"ایکسپورٹ ✓", toastNoData:"ڈیٹا نہیں",
-    errFill:"تمام خانے پُر کریں", errHours:"گھنٹے 0.5–16",
+    errFill:"تمام خانے پُر کریں", errHours:"گھنٹے 0 سے 24 کے درمیان",
+    errNoHoursNoFood:"گھنٹے درج کریں یا کھانے کا الاؤنس منتخب کریں",
     errSelName:"نام منتخب کریں", errPin:"پن غلط",
     errPass:"پاس ورڈ غلط", errPinFmt:"پن 4 ہندسے",
     errWName:"نام درج کریں", errSelWorkers:"ایک ملازم منتخب کریں",
@@ -1453,7 +1456,7 @@ function formatTime12(timeStr){
 }
 
 async function addEntry(){
-  const h=parseFloat(document.getElementById("entryHours").value);
+  const h=parseFloat(document.getElementById("entryHours").value)||0;
   const pr=document.getElementById("entryProject").value.trim();
   const ci=document.getElementById("entryCity").value;
   const fo=document.getElementById("entryFood").checked;
@@ -1461,7 +1464,8 @@ async function addEntry(){
   const fromT=document.getElementById("entryFrom").value||"";
   const toT=document.getElementById("entryTo").value||"";
   if(!pr||!ci)return toast(t("errFill"));
-  if(isNaN(h)||h<=0||h>24)return toast(t("errHours"));
+  if(isNaN(h)||h<0||h>24)return toast(t("errHours"));
+  if(h===0&&!fo)return toast(t("errNoHoursNoFood"));
   const date=document.getElementById("entryDate")?.value||getTodayStr();
   const entry={date,hours:h,project:pr,city:ci,food:fo,status:"pending",id:Date.now(),
     timeFrom:fromT, timeTo:toT, notes};
