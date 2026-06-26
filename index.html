@@ -530,7 +530,7 @@ body.lang-en .modal-actions { justify-content: flex-start; }
     <div class="modal-title"><div class="modal-title-icon">✏️</div><span id="eModalT">تعديل السجل</span></div>
     <div class="modal-grid">
       <div class="field-group" style="margin:0;"><label class="field-label" id="eLDate">التاريخ</label><input type="date" id="editDate"/></div>
-      <div class="field-group" style="margin:0;"><label class="field-label" id="eLHours">الساعات</label><input type="number" id="editHours" min="0.5" max="24" step="0.5" oninput="clearEditTime()"/></div>
+      <div class="field-group" style="margin:0;"><label class="field-label" id="eLHours">الساعات</label><input type="number" id="editHours" min="0" max="24" step="0.5" oninput="clearEditTime()"/></div>
     </div>
     <div class="modal-grid">
       <div class="field-group" style="margin:0;"><label class="field-label" id="eLFromTime">من الساعة</label><input type="time" id="editFrom" style="direction:ltr;" onchange="calcEditHours()"/></div>
@@ -1973,12 +1973,13 @@ function openEdit(wk,id){
 function closeEditModal(){document.getElementById("editModal").style.display="none";editingE=null;}
 async function confirmEdit(){
   if(!editingE)return;
-  const nd=document.getElementById("editDate").value,nh=parseFloat(document.getElementById("editHours").value);
+  const nd=document.getElementById("editDate").value,nh=parseFloat(document.getElementById("editHours").value)||0;
   const np=document.getElementById("editProject").value.trim(),nc=document.getElementById("editCity").value;
   const ns=document.getElementById("editStatus").value,nf=document.getElementById("editFood").checked;
   const nn=document.getElementById("editNotes")?.value.trim()||"";
-  if(!nd||isNaN(nh)||!np||!nc)return toast(t("errFill"));
-  if(nh<=0||nh>24)return toast(t("errHours"));
+  if(!nd||!np||!nc)return toast(t("errFill"));
+  if(isNaN(nh)||nh<0||nh>24)return toast(t("errHours"));
+  if(nh===0&&!nf)return toast(t("errNoHoursNoFood"));
   const nFrom=document.getElementById("editFrom").value||"";
   const nTo=document.getElementById("editTo").value||"";
   showLoading(true);
@@ -2392,10 +2393,11 @@ function preparePDFHeader(logoIds, titleIds, dateIds, rightIds, titleText, dateT
 
 function printWorkerTable(){
   const p=getPeriod(periodOffset);
+  const wName=workers[currentUser].name;
   preparePDFHeader(
     ["wPdfLogo"],["wPdfTitle"],["wPdfDate"],["wPdfRight"],
     t("wTableT")+" — "+p.label,"",
-    workers[currentUser].name+" | "+roleLabel(workers[currentUser].role)
+    wName+" | "+roleLabel(workers[currentUser].role)
   );
   document.getElementById("wPdfCompany").textContent=t("companyName");
   const header=document.getElementById("wPdfHeader");
@@ -2404,16 +2406,18 @@ function printWorkerTable(){
   if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
   pt.innerHTML=header.outerHTML+body.innerHTML;
   pt.style.display="block";
-  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";},500);},200);
+  const prevTitle=document.title;
+  document.title=wName+"_"+p.label;
+  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},500);},200);
 }
 
 function printSOTable(statusFilter){
   const p=getPeriod(periodOffset);
   const label=statusFilter==="pending"?t("sPendTitle"):t("sApprTitle");
+  const workerNames=getSOSelected().map(k=>workers[k]?.name).filter(Boolean).join("_");
   preparePDFHeader(
     ["sPdfLogo"],["sPdfTitle"],["sPdfDate"],["sPdfRight"],
-    label+" — "+p.label,"",
-    getSOSelected().map(k=>workers[k]?.name).filter(Boolean).join(", ")
+    label+" — "+p.label,"", workerNames.replace(/_/g,", ")
   );
   document.getElementById("sPdfCompany").textContent=t("companyName");
   const header=document.getElementById("sPdfHeader");
@@ -2422,7 +2426,9 @@ function printSOTable(statusFilter){
   if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
   pt.innerHTML=header.outerHTML+(bodyEl?bodyEl.innerHTML:"");
   pt.style.display="block";
-  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";},500);},200);
+  const prevTitle=document.title;
+  document.title=workerNames+"_"+p.label;
+  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},500);},200);
 }
 // keep old name for backward compat
 function printSupTable(){ printSOTable("approved"); }
@@ -2432,26 +2438,27 @@ function printReport(){
   const body=document.getElementById("repTableBody");
   if(!header||!body)return;
   document.getElementById("rPdfCompany").textContent=t("companyName");
-
-  // Build isolated print target
   let pt=document.getElementById("printTarget");
   if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
   pt.innerHTML=header.outerHTML+body.innerHTML;
   pt.style.display="block";
-  // Show worker section headers in print
   pt.querySelectorAll(".worker-section-header").forEach(el=>el.style.display="block");
-
+  const prevTitle=document.title;
+  // filename: WorkerName(s)_FromDate_ToDate
+  const wNames=reportMeta.workers.replace(/،|,/g,"_").replace(/\s+/g,"");
+  document.title=wNames+"_"+reportMeta.range.replace(/\s/g,"").replace(/–|-/g,"_");
   setTimeout(()=>{
     window.print();
-    setTimeout(()=>{pt.style.display="none";pt.innerHTML="";},500);
+    setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},500);
   },200);
 }
 
 function printMyReport(){
+  const rangeLabel=window._myRepData?.rangeLabel||"";
+  const wName=workers[currentUser].name;
   preparePDFHeader(
     ["wPdfLogo"],["wPdfTitle"],["wPdfDate"],["wPdfRight"],
-    t("wTableT")+" — "+(window._myRepData?.rangeLabel||""),"",
-    workers[currentUser].name
+    t("wTableT")+" — "+rangeLabel,"",wName
   );
   document.getElementById("wPdfCompany").textContent=t("companyName");
   const header=document.getElementById("wPdfHeader");
@@ -2460,7 +2467,9 @@ function printMyReport(){
   if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
   pt.innerHTML=header.outerHTML+(body?body.innerHTML:"");
   pt.style.display="block";
-  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";},500);},200);
+  const prevTitle=document.title;
+  document.title=wName+"_"+rangeLabel.replace(/\s/g,"").replace(/–|-/g,"_");
+  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},500);},200);
 }
 
 // ================================================================
