@@ -30,6 +30,21 @@ body.lang-en { direction: ltr; }
   .worker-section-header { display: block !important; }
 }
 #printTarget { display: none; }
+.pdf-signature { display: none; }
+@media print {
+  .pdf-signature {
+    display: block !important;
+    margin-top: 30px;
+    padding: 16px 20px;
+    border-top: 2px solid #1a3d6b;
+    background: #f9f9f9;
+    border-radius: 0 0 8px 8px;
+  }
+  .pdf-signature-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .pdf-signature-item { font-size: 10pt; color: #1a1a1a; }
+  .pdf-signature-label { font-size: 9pt; color: #888; margin-bottom: 3px; }
+  .pdf-signature-value { font-size: 11pt; font-weight: 700; color: #1a3d6b; }
+}
 .print-only { display: none; }
 .worker-section-header { display: none; background: #E6F1FB; border-radius: 8px; padding: 10px 16px; margin: 12px 0 8px; }
 .worker-section-header h3 { font-size: 14pt; font-weight: 700; color: #185FA5; margin: 0; }
@@ -2391,6 +2406,33 @@ function preparePDFHeader(logoIds, titleIds, dateIds, rightIds, titleText, dateT
   rightIds.forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=rightText;});
 }
 
+// ================================================================
+// PDF SIGNATURE FOOTER
+// ================================================================
+function getPDFSignature(){
+  const now = new Date();
+  const dateStr = now.getFullYear()+"/"+String(now.getMonth()+1).padStart(2,"0")+"/"+String(now.getDate()).padStart(2,"0");
+  const timeStr = String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+  const approvedLabel = lang==="en"?"Approved by":lang==="ur"?"منظور کنندہ":"تم الاعتماد من قبل";
+  const dateLabel = lang==="en"?"Print Date":lang==="ur"?"تاریخ طباعت":"تاريخ الطباعة";
+  return `<div class="pdf-signature">
+    <div class="pdf-signature-row">
+      <div class="pdf-signature-item">
+        <div class="pdf-signature-label">${approvedLabel}</div>
+        <div class="pdf-signature-value">م. مروان فقيه</div>
+      </div>
+      <div class="pdf-signature-item" style="text-align:center;">
+        <div style="font-size:9pt;color:#888;">${t("companyName")}</div>
+      </div>
+      <div class="pdf-signature-item" style="text-align:${lang==="en"?"right":"left"};">
+        <div class="pdf-signature-label">${dateLabel}</div>
+        <div class="pdf-signature-value">${dateStr} — ${timeStr}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+
 function printWorkerTable(){
   const p=getPeriod(periodOffset);
   const wName=workers[currentUser].name;
@@ -2404,7 +2446,7 @@ function printWorkerTable(){
   const body=document.getElementById("wTableBody");
   let pt=document.getElementById("printTarget");
   if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
-  pt.innerHTML=header.outerHTML+body.innerHTML;
+  pt.innerHTML=header.outerHTML+body.innerHTML+getPDFSignature();
   pt.style.display="block";
   const prevTitle=document.title;
   document.title=wName+"_"+p.label;
@@ -2424,7 +2466,7 @@ function printSOTable(statusFilter){
   const bodyEl=document.getElementById(statusFilter==="pending"?"sPendBody":"sApprBody");
   let pt=document.getElementById("printTarget");
   if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
-  pt.innerHTML=header.outerHTML+(bodyEl?bodyEl.innerHTML:"");
+  pt.innerHTML=header.outerHTML+(bodyEl?bodyEl.innerHTML:"")+getPDFSignature();
   pt.style.display="block";
   const prevTitle=document.title;
   document.title=workerNames+"_"+p.label;
@@ -2440,7 +2482,7 @@ function printReport(){
   document.getElementById("rPdfCompany").textContent=t("companyName");
   let pt=document.getElementById("printTarget");
   if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
-  pt.innerHTML=header.outerHTML+body.innerHTML;
+  pt.innerHTML=header.outerHTML+body.innerHTML+getPDFSignature();
   pt.style.display="block";
   pt.querySelectorAll(".worker-section-header").forEach(el=>el.style.display="block");
   const prevTitle=document.title;
@@ -2465,7 +2507,7 @@ function printMyReport(){
   const body=document.getElementById("myRepTable");
   let pt=document.getElementById("printTarget");
   if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
-  pt.innerHTML=header.outerHTML+(body?body.innerHTML:"");
+  pt.innerHTML=header.outerHTML+(body?body.innerHTML:"")+getPDFSignature();
   pt.style.display="block";
   const prevTitle=document.title;
   document.title=wName+"_"+rangeLabel.replace(/\s/g,"").replace(/–|-/g,"_");
