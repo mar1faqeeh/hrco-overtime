@@ -2241,8 +2241,14 @@ function generateReport(){
       <h3>${grp.name}</h3>
       <p>${roleLabel(grp.role)}</p>
     </div>`;
-    html+=`<div class="worker-name-screen no-print" style="font-size:14px;font-weight:600;color:#185FA5;padding:8px 12px;background:#E6F1FB;border-radius:8px;margin-bottom:8px;">
-      ${grp.name} — <span class="badge ${roleClass(grp.role)}">${roleLabel(grp.role)}</span>
+    html+=`<div class="worker-name-screen no-print" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:#E6F1FB;border-radius:8px;margin-bottom:8px;flex-wrap:wrap;">
+      <div style="font-size:14px;font-weight:600;color:#185FA5;">
+        ${grp.name} — <span class="badge ${roleClass(grp.role)}">${roleLabel(grp.role)}</span>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-excel" onclick="exportWorkerRepExcel('${wk}')" style="padding:4px 10px;font-size:11px;">Excel ↓</button>
+        <button class="btn-pdf" onclick="printWorkerReport('${wk}')" style="padding:4px 10px;font-size:11px;">🖨 PDF</button>
+      </div>
     </div>`;
 
     // Screen table: all entries with correct column order
@@ -2474,6 +2480,85 @@ function printSOTable(statusFilter){
 }
 // keep old name for backward compat
 function printSupTable(){ printSOTable("approved"); }
+
+// ================================================================
+// PER-WORKER REPORT EXPORT (PDF + Excel)
+// ================================================================
+function printWorkerReport(wk){
+  const wName=workers[wk]?.name||"";
+  const approved=reportData.filter(e=>e.wk===wk&&e.status==="approved");
+  if(!approved.length)return toast(t("toastNoData"));
+
+  const approvedH=approved.reduce((s,e)=>s+e.hours,0);
+  const foodD=approved.filter(e=>e.food).length;
+
+  // Build header
+  document.getElementById("rPdfLogo").src=LOGO_SRC;
+  document.getElementById("rPdfCompany").textContent=t("companyName");
+  document.getElementById("rPdfTitle").textContent=reportMeta.title+" | "+reportMeta.range;
+  document.getElementById("rPdfDate").textContent=t("generatedOn")+": "+getTodayStr();
+  document.getElementById("rPdfRight").textContent=wName+" — "+roleLabel(workers[wk].role);
+  const header=document.getElementById("rPdfHeader");
+
+  // Build table for this worker only (approved entries)
+  const rows=approved.map(e=>[
+    e.date, fmtTimeRange(e), e.project, cityLabel(e.city), e.hours,
+    e.food?"✓":"—", e.notes||"—"
+  ]);
+  const tot=Array(7).fill("");
+  tot[0]=t("totalLbl");
+  tot[4]=approvedH+" "+t("hoursU");
+  tot[5]=foodD+" "+t("foodU");
+  tot[6]=approved.length+" "+t("workU");
+
+  const workerHeader=`<div style="background:#E6F1FB;border-radius:8px;padding:12px 18px;margin-bottom:12px;">
+    <div style="font-size:15pt;font-weight:800;color:#185FA5;">${wName}</div>
+    <div style="font-size:10pt;color:#444;margin-top:2px;">${roleLabel(workers[wk].role)}</div>
+  </div>`;
+
+  const tableHtml=buildTable(
+    [t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thNotes")],
+    rows, tot
+  );
+
+  let pt=document.getElementById("printTarget");
+  if(!pt){pt=document.createElement("div");pt.id="printTarget";document.body.appendChild(pt);}
+  pt.innerHTML=header.outerHTML+workerHeader+tableHtml+getPDFSignature();
+  pt.style.display="block";
+
+  const prevTitle=document.title;
+  document.title=wName+"_"+reportMeta.range.replace(/\s/g,"").replace(/–|-/g,"_to_");
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},500);
+  },200);
+}
+
+function exportWorkerRepExcel(wk){
+  const wName=workers[wk]?.name||"";
+  const approved=reportData.filter(e=>e.wk===wk&&e.status==="approved");
+  if(!approved.length)return toast(t("toastNoData"));
+  const approvedH=approved.reduce((s,e)=>s+e.hours,0);
+  const foodD=approved.filter(e=>e.food).length;
+
+  const data=[];
+  data.push([t("companyName")]);
+  data.push([wName+" — "+roleLabel(workers[wk].role)]);
+  data.push([reportMeta.title+" | "+reportMeta.range]);
+  data.push([]);
+  data.push([t("thDate"),t("thTime"),t("thProject"),t("thCity"),t("thHours"),t("thFood"),t("thNotes")]);
+  approved.forEach(e=>{
+    data.push([e.date,fmtTimeRange(e),e.project,cityLabel(e.city),e.hours,e.food?"✓":"—",e.notes||""]);
+  });
+  data.push([t("totalLbl"),"","","",approvedH+" "+t("hoursU"),foodD+" "+t("foodU"),approved.length+" "+t("workU")]);
+
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"]=[{wch:14},{wch:14},{wch:22},{wch:14},{wch:10},{wch:10},{wch:24}];
+  XLSX.utils.book_append_sheet(wb,ws,wName.slice(0,31));
+  XLSX.writeFile(wb, wName+"_"+reportMeta.range.replace(/\s/g,"").replace(/–|-/g,"_to_")+".xlsx");
+  toast(t("toastExp"));
+}
 
 function printReport(){
   const header=document.getElementById("rPdfHeader");
