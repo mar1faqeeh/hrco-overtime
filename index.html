@@ -141,6 +141,8 @@ body.lang-ar td, body.lang-ur td { text-align: right; }
 body.lang-en td { text-align: left; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #FAFAFA; }
+.fri-row td { background: #FFF8E6 !important; border-right: 3px solid #E8A800; }
+.fri-badge { display:inline-flex;align-items:center;gap:5px;background:#FFF3CC;color:#8A6000;border:1px solid #E8A800;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700; }
 .totals-row td { background: #F0F7FF !important; font-weight: 700; border-top: 2px solid #B5D4F4; font-size: 13px; color: #185FA5; }
 .tp { display: inline-flex; align-items: center; border-radius: 20px; padding: 3px 10px; font-size: 12px; font-weight: 600; }
 .tp-b { background: #E6F1FB; color: #185FA5; }
@@ -476,8 +478,12 @@ body.lang-en .modal-actions { justify-content: flex-start; }
             <button class="btn-outline" onclick="selectAllWorkers(false)" id="btnSelNone">إلغاء الكل</button>
           </div>
           <div class="workers-checkboxes" id="rWorkersCheck"></div>
-          <div style="margin-top:1.25rem;">
+          <div style="margin-top:1.25rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
             <button class="btn btn-blue" onclick="generateReport()" id="btnGenRep">إنشاء التقرير</button>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;background:#FFF8E6;border:1.5px solid #E8A800;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;color:#8A6000;">
+              <input type="checkbox" id="friFilter" onchange="generateReport()" style="width:15px;height:15px;cursor:pointer;"/>
+              🟡 أيام الجمعة فقط
+            </label>
           </div>
         </div>
         <div id="reportResult" style="display:none;">
@@ -1713,9 +1719,23 @@ async function chStatus(wk,id,status){
 // ================================================================
 // SHARED TABLE BUILDER
 // ================================================================
-function buildTable(headers,rows,totals){
+// Returns true if dateStr (yyyy/mm/dd) is a Friday
+function isFriday(dateStr){
+  if(!dateStr)return false;
+  const p=dateStr.split("/");
+  return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2])).getDay()===5;
+}
+
+function buildTable(headers,rows,totals,datecol=0){
   const h=headers.map(h=>"<th>"+h+"</th>").join("");
-  const r=rows.map(row=>"<tr>"+row.map(c=>"<td>"+c+"</td>").join("")+"</tr>").join("");
+  // rows is an array of arrays; check first cell for Friday
+  const r=rows.map(row=>{
+    // extract plain text from first cell to detect date
+    const firstCell=String(row[datecol]||"").replace(/<[^>]+>/g,"").trim();
+    const fri=isFriday(firstCell);
+    const style=fri?' style="background:#FFF8E6;border-right:3px solid #E8A800;"':'';
+    return "<tr"+style+">"+row.map(c=>"<td>"+c+"</td>").join("")+"</tr>";
+  }).join("");
   const tot="<tr class='totals-row'>"+totals.map(c=>"<td>"+c+"</td>").join("")+"</tr>";
   return`<div class="tbl-wrap"><table><thead><tr>${h}</tr></thead><tbody>${r}${tot}</tbody></table></div>`;
 }
@@ -2186,6 +2206,9 @@ function generateReport(){
     if(entries[wk])Object.values(entries[wk]).forEach(list=>allEnt.push(...list));
     allEnt.forEach(e=>{const d=dateStrToObj(e.date);if(d>=range.from&&d<=range.to)reportData.push({...e,wk,wName:workers[wk].name,wRole:workers[wk].role});});
   });
+  // Friday filter
+  const friOnly=document.getElementById("friFilter")?.checked;
+  if(friOnly) reportData=reportData.filter(e=>isFriday(e.date));
   reportData.sort((a,b)=>a.date.localeCompare(b.date));
   const rtLabels={daily:t("repDailyTitle"),weekly:t("repWeeklyTitle"),monthly:t("repMonthlyTitle"),yearly:t("repYearlyTitle"),custom:t("repCustomTitle")};
   reportMeta={title:rtLabels[reportType],range:range.label,workers:selWks.map(k=>workers[k].name).join(", ")};
@@ -2415,6 +2438,18 @@ function preparePDFHeader(logoIds, titleIds, dateIds, rightIds, titleText, dateT
 // ================================================================
 // PDF SIGNATURE FOOTER
 // ================================================================
+// ================================================================
+// FILENAME SANITIZER — browsers strip / \ : * ? " < > | from titles
+// ================================================================
+function safeFileName(str){
+  return String(str||"")
+    .replace(/[\/\\:*?"<>|]/g,"-")   // illegal chars → dash
+    .replace(/–|—/g,"_to_")           // en/em dash → _to_
+    .replace(/\s+/g,"_")              // spaces → underscore
+    .replace(/_+/g,"_")               // collapse underscores
+    .replace(/^_|_$/g,"");            // trim edges
+}
+
 function getPDFSignature(){
   const now = new Date();
   const dateStr = now.getFullYear()+"/"+String(now.getMonth()+1).padStart(2,"0")+"/"+String(now.getDate()).padStart(2,"0");
@@ -2455,8 +2490,8 @@ function printWorkerTable(){
   pt.innerHTML=header.outerHTML+body.innerHTML+getPDFSignature();
   pt.style.display="block";
   const prevTitle=document.title;
-  document.title=wName+"_"+p.label;
-  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},500);},200);
+  document.title=safeFileName(wName+"_"+p.label);
+  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},600);},400);
 }
 
 function printSOTable(statusFilter){
@@ -2475,8 +2510,8 @@ function printSOTable(statusFilter){
   pt.innerHTML=header.outerHTML+(bodyEl?bodyEl.innerHTML:"")+getPDFSignature();
   pt.style.display="block";
   const prevTitle=document.title;
-  document.title=workerNames+"_"+p.label;
-  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},500);},200);
+  document.title=safeFileName(workerNames+"_"+p.label);
+  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},600);},400);
 }
 // keep old name for backward compat
 function printSupTable(){ printSOTable("approved"); }
@@ -2527,11 +2562,11 @@ function printWorkerReport(wk){
   pt.style.display="block";
 
   const prevTitle=document.title;
-  document.title=wName+"_"+reportMeta.range.replace(/\s/g,"").replace(/–|-/g,"_to_");
+  document.title=safeFileName(wName+"_"+reportMeta.range);
   setTimeout(()=>{
     window.print();
-    setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},500);
-  },200);
+    setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},600);
+  },400);
 }
 
 function exportWorkerRepExcel(wk){
@@ -2573,11 +2608,11 @@ function printReport(){
   const prevTitle=document.title;
   // filename: WorkerName(s)_FromDate_ToDate
   const wNames=reportMeta.workers.replace(/،|,/g,"_").replace(/\s+/g,"");
-  document.title=wNames+"_"+reportMeta.range.replace(/\s/g,"").replace(/–|-/g,"_");
+  document.title=safeFileName(wNames+"_"+reportMeta.range);
   setTimeout(()=>{
     window.print();
-    setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},500);
-  },200);
+    setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},600);
+  },400);
 }
 
 function printMyReport(){
@@ -2595,8 +2630,8 @@ function printMyReport(){
   pt.innerHTML=header.outerHTML+(body?body.innerHTML:"")+getPDFSignature();
   pt.style.display="block";
   const prevTitle=document.title;
-  document.title=wName+"_"+rangeLabel.replace(/\s/g,"").replace(/–|-/g,"_");
-  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},500);},200);
+  document.title=safeFileName(wName+"_"+rangeLabel);
+  setTimeout(()=>{window.print();setTimeout(()=>{pt.style.display="none";pt.innerHTML="";document.title=prevTitle;},600);},400);
 }
 
 // ================================================================
